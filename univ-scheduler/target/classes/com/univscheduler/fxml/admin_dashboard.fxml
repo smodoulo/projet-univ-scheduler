@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.univscheduler.controller.AdminDashboardController"
+            styleClass="root-pane">
+    <top>
+        <HBox styleClass="navbar" alignment="CENTER_LEFT" spacing="16">
+            <Label text="🎓 UNIV-SCHEDULER" styleClass="nav-logo"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="Administration" styleClass="nav-role-badge"/>
+            <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
+            <Button text="🔄 Actualiser" styleClass="btn-secondary" onAction="#handleRefresh" style="-fx-font-size:11px;"/>
+            <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true">
+            <VBox spacing="16" style="-fx-padding:20;">
+                <HBox spacing="12">
+                    <VBox styleClass="stat-card stat-blue" HBox.hgrow="ALWAYS">
+                        <Label text="👥 Utilisateurs" styleClass="stat-label"/>
+                        <Label fx:id="totalUsersLabel" text="0" styleClass="stat-value"/>
+                    </VBox>
+                    <VBox styleClass="stat-card stat-green" HBox.hgrow="ALWAYS">
+                        <Label text="🏫 Salles" styleClass="stat-label"/>
+                        <Label fx:id="totalSallesLabel" text="0" styleClass="stat-value"/>
+                    </VBox>
+                    <VBox styleClass="stat-card stat-orange" HBox.hgrow="ALWAYS">
+                        <Label text="📅 Cours" styleClass="stat-label"/>
+                        <Label fx:id="totalCoursLabel" text="0" styleClass="stat-value"/>
+                    </VBox>
+                    <VBox styleClass="stat-card stat-purple" HBox.hgrow="ALWAYS">
+                        <Label text="👨‍🏫 Enseignants" styleClass="stat-label"/>
+                        <Label fx:id="totalEnsLabel" text="0" styleClass="stat-value"/>
+                    </VBox>
+                    <VBox styleClass="stat-card stat-teal" HBox.hgrow="ALWAYS">
+                        <Label text="✅ Salles dispo" styleClass="stat-label"/>
+                        <Label fx:id="sallesDispoLabel" text="0" styleClass="stat-value"/>
+                    </VBox>
+                </HBox>
+                <TabPane>
+                    <Tab text="👥 Utilisateurs" closable="false">
+                        <HBox spacing="16">
+                            <VBox HBox.hgrow="ALWAYS" spacing="8">
+                                <Label text="Liste des utilisateurs" styleClass="section-title"/>
+                                <TableView fx:id="userTable" prefHeight="500" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colUserId" text="ID" prefWidth="50"/>
+                                        <TableColumn fx:id="colUserNom" text="Nom" prefWidth="120"/>
+                                        <TableColumn fx:id="colUserPrenom" text="Prénom" prefWidth="120"/>
+                                        <TableColumn fx:id="colUserEmail" text="Email" prefWidth="200"/>
+                                        <TableColumn fx:id="colUserRole" text="Rôle" prefWidth="110"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                            <VBox styleClass="form-panel" spacing="10" minWidth="280" maxWidth="280">
+                                <Label fx:id="userFormTitle" text="Nouvel Utilisateur" styleClass="form-title"/>
+                                <Label text="Nom" styleClass="form-label"/>
+                                <TextField fx:id="nomField" promptText="Nom" styleClass="form-field"/>
+                                <Label text="Prénom" styleClass="form-label"/>
+                                <TextField fx:id="prenomField" promptText="Prénom" styleClass="form-field"/>
+                                <Label text="Email" styleClass="form-label"/>
+                                <TextField fx:id="emailField" promptText="email@univ.fr" styleClass="form-field"/>
+                                <Label text="Mot de passe" styleClass="form-label"/>
+                                <TextField fx:id="passwordField" promptText="Mot de passe" styleClass="form-field"/>
+                                <Label text="Rôle" styleClass="form-label"/>
+                                <ComboBox fx:id="roleCombo" maxWidth="Infinity"/>
+                                <Button text="💾 Sauvegarder" styleClass="btn-primary" onAction="#handleSaveUser" maxWidth="Infinity"/>
+                                <HBox spacing="6">
+                                    <Button text="🗑 Supprimer" styleClass="btn-danger" onAction="#handleDeleteUser" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="✕ Annuler" styleClass="btn-secondary" onAction="#handleClearUser" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                </HBox>
+                            </VBox>
+                        </HBox>
+                    </Tab>
+                    <Tab text="🏫 Salles" closable="false">
+                        <HBox spacing="16">
+                            <VBox HBox.hgrow="ALWAYS" spacing="8">
+                                <Label text="Gestion des Salles" styleClass="section-title"/>
+                                <TableView fx:id="salleTable" prefHeight="500" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colSalleId" text="ID" prefWidth="50"/>
+                                        <TableColumn fx:id="colSalleNum" text="Numéro" prefWidth="90"/>
+                                        <TableColumn fx:id="colSalleType" text="Type" prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleCap" text="Capacité" prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleBat" text="Bâtiment" prefWidth="150"/>
+                                        <TableColumn fx:id="colSalleDispo" text="Disponible" prefWidth="90"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                            <VBox styleClass="form-panel" spacing="10" minWidth="280" maxWidth="280">
+                                <Label fx:id="salleFormTitle" text="Nouvelle Salle" styleClass="form-title"/>
+                                <Label text="Numéro" styleClass="form-label"/>
+                                <TextField fx:id="salleNumField" promptText="Ex: A101" styleClass="form-field"/>
+                                <Label text="Capacité" styleClass="form-label"/>
+                                <TextField fx:id="sallecapField" promptText="30" styleClass="form-field"/>
+                                <Label text="Type" styleClass="form-label"/>
+                                <ComboBox fx:id="salleTypeCombo" maxWidth="Infinity"/>
+                                <Label text="Bâtiment" styleClass="form-label"/>
+                                <ComboBox fx:id="salleBatCombo" maxWidth="Infinity"/>
+                                <CheckBox fx:id="salleDispoCheck" text="Disponible" selected="true"/>
+                                <Button text="💾 Sauvegarder" styleClass="btn-primary" onAction="#handleSaveSalle" maxWidth="Infinity"/>
+                                <HBox spacing="6">
+                                    <Button text="🗑 Supprimer" styleClass="btn-danger" onAction="#handleDeleteSalle" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="✕ Annuler" styleClass="btn-secondary" onAction="#handleClearSalle" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                </HBox>
+                            </VBox>
+                        </HBox>
+                    </Tab>
+                    <Tab text="🏢 Bâtiments" closable="false">
+                        <HBox spacing="16">
+                            <VBox HBox.hgrow="ALWAYS" spacing="8">
+                                <Label text="Gestion des Bâtiments" styleClass="section-title"/>
+                                <TableView fx:id="batTable" prefHeight="500" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colBatId" text="ID" prefWidth="50"/>
+                                        <TableColumn fx:id="colBatNom" text="Nom" prefWidth="150"/>
+                                        <TableColumn fx:id="colBatLoc" text="Localisation" prefWidth="200"/>
+                                        <TableColumn fx:id="colBatEtages" text="Étages" prefWidth="80"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                            <VBox styleClass="form-panel" spacing="10" minWidth="260" maxWidth="260">
+                                <Label fx:id="batFormTitle" text="Nouveau Bâtiment" styleClass="form-title"/>
+                                <Label text="Nom" styleClass="form-label"/>
+                                <TextField fx:id="batNomField" promptText="Ex: Bâtiment C" styleClass="form-field"/>
+                                <Label text="Localisation" styleClass="form-label"/>
+                                <TextField fx:id="batLocField" promptText="Ex: Campus Est" styleClass="form-field"/>
+                                <Label text="Nombre d'étages" styleClass="form-label"/>
+                                <TextField fx:id="batEtagesField" promptText="1" styleClass="form-field"/>
+                                <Button text="💾 Sauvegarder" styleClass="btn-primary" onAction="#handleSaveBat" maxWidth="Infinity"/>
+                                <HBox spacing="6">
+                                    <Button text="🗑 Supprimer" styleClass="btn-danger" onAction="#handleDeleteBat" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="✕ Annuler" styleClass="btn-secondary" onAction="#handleClearBat" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                </HBox>
+                            </VBox>
+                        </HBox>
+                    </Tab>
+                    <Tab text="🔧 Équipements" closable="false">
+                        <HBox spacing="16">
+                            <VBox HBox.hgrow="ALWAYS" spacing="8">
+                                <Label text="Gestion des Équipements" styleClass="section-title"/>
+                                <TableView fx:id="equipTable" prefHeight="500" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colEquipId" text="ID" prefWidth="50"/>
+                                        <TableColumn fx:id="colEquipNom" text="Nom" prefWidth="150"/>
+                                        <TableColumn fx:id="colEquipType" text="Type" prefWidth="100"/>
+                                        <TableColumn fx:id="colEquipEtat" text="État" prefWidth="80"/>
+                                        <TableColumn fx:id="colEquipSalle" text="Salle" prefWidth="80"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                            <VBox styleClass="form-panel" spacing="10" minWidth="280" maxWidth="280">
+                                <Label fx:id="equipFormTitle" text="Nouvel Équipement" styleClass="form-title"/>
+                                <Label text="Nom" styleClass="form-label"/>
+                                <TextField fx:id="equipNomField" promptText="Ex: Vidéoprojecteur" styleClass="form-field"/>
+                                <Label text="Description" styleClass="form-label"/>
+                                <TextField fx:id="equipDescField" promptText="Modèle, détails..." styleClass="form-field"/>
+                                <Label text="Type" styleClass="form-label"/>
+                                <ComboBox fx:id="equipTypeCombo" maxWidth="Infinity"/>
+                                <Label text="État" styleClass="form-label"/>
+                                <ComboBox fx:id="equipEtatCombo" maxWidth="Infinity"/>
+                                <Label text="Salle" styleClass="form-label"/>
+                                <ComboBox fx:id="equipSalleCombo" maxWidth="Infinity"/>
+                                <CheckBox fx:id="equipDispoCheck" text="Disponible" selected="true"/>
+                                <Button text="💾 Sauvegarder" styleClass="btn-primary" onAction="#handleSaveEquip" maxWidth="Infinity"/>
+                                <HBox spacing="6">
+                                    <Button text="🗑 Supprimer" styleClass="btn-danger" onAction="#handleDeleteEquip" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="✕ Annuler" styleClass="btn-secondary" onAction="#handleClearEquip" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                </HBox>
+                            </VBox>
+                        </HBox>
+                    </Tab>
+                    <Tab text="📊 Statistiques" closable="false">
+                        <VBox spacing="16" style="-fx-padding:8;">
+                            <Label text="Tableau de Bord Analytique" styleClass="section-title"/>
+                            <HBox spacing="16">
+                                <VBox styleClass="form-panel" HBox.hgrow="ALWAYS" spacing="4">
+                                    <Label text="Répartition des Utilisateurs par Rôle" styleClass="form-title"/>
+                                    <VBox fx:id="chartUsersContainer" minHeight="240"/>
+                                </VBox>
+                                <VBox styleClass="form-panel" HBox.hgrow="ALWAYS" spacing="4">
+                                    <Label text="Types de Salles" styleClass="form-title"/>
+                                    <VBox fx:id="chartSallesContainer" minHeight="240"/>
+                                </VBox>
+                            </HBox>
+                            <VBox styleClass="form-panel" spacing="4">
+                                <Label text="Distribution des Cours par Jour" styleClass="form-title"/>
+                                <VBox fx:id="chartCoursContainer" minHeight="260"/>
+                            </VBox>
+                        </VBox>
+                    </Tab>
+                </TabPane>
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>

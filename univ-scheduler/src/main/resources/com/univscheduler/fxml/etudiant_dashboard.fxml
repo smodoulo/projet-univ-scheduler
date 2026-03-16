@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.univscheduler.controller.EtudiantDashboardController"
+            styleClass="root-pane">
+
+    <fx:define>
+        <ToggleGroup fx:id="modeGroup"/>
+    </fx:define>
+
+    <top>
+        <HBox styleClass="navbar" alignment="CENTER_LEFT" spacing="16">
+            <Label text="🎓 UNIV-SCHEDULER" styleClass="nav-logo"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="Étudiant" styleClass="nav-role-badge-teal"/>
+            <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
+            <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true">
+            <VBox spacing="16" style="-fx-padding:20;">
+                <HBox spacing="12">
+                    <VBox styleClass="stat-card stat-blue" HBox.hgrow="ALWAYS">
+                        <Label fx:id="totalCoursLabel" text="Cours : 0" styleClass="stat-value-small"/>
+                    </VBox>
+                </HBox>
+
+                <TabPane>
+
+                    <!-- ═══ TAB 1 : EMPLOI DU TEMPS ═══ -->
+                    <Tab text="📅 Emploi du Temps" closable="false">
+                        <VBox spacing="12">
+                            <HBox spacing="12" alignment="CENTER_LEFT">
+                                <Label text="Classe :" styleClass="form-label"/>
+                                <ComboBox fx:id="classeCombo" prefWidth="200"/>
+                                <Button text="📄 Export PDF" styleClass="btn-secondary" onAction="#handleExportPDF"/>
+                            </HBox>
+                            <HBox spacing="16">
+                                <TableView fx:id="coursTable" prefHeight="420" styleClass="data-table" HBox.hgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="colMat"   text="Matière"    prefWidth="160"/>
+                                        <TableColumn fx:id="colEns"   text="Enseignant" prefWidth="150"/>
+                                        <TableColumn fx:id="colCren"  text="Créneau"    prefWidth="130"/>
+                                        <TableColumn fx:id="colSalle" text="Salle"      prefWidth="80"/>
+                                        <TableColumn fx:id="colDate"  text="Date"       prefWidth="100"/>
+                                    </columns>
+                                </TableView>
+                                <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
+                                    <Label text="📊 Cours par Matière" styleClass="form-title"/>
+                                    <VBox fx:id="chartEtuContainer" minHeight="220"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+                    </Tab>
+
+                    <!-- ═══ TAB 2 : RECHERCHE SALLES ═══ -->
+                    <Tab text="🔍 Chercher Salle Libre" closable="false">
+                        <HBox spacing="16">
+
+                            <!-- Panneau filtres -->
+                            <VBox styleClass="form-panel" spacing="14" minWidth="290" maxWidth="290">
+                                <Label text="🔎 Filtres de Recherche" styleClass="form-title"/>
+
+                                <!-- Mode temporel -->
+                                <VBox spacing="8"
+                                      style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
+                                    <Label text="⏱ Période" styleClass="form-label"/>
+                                    <RadioButton fx:id="radioMaintenantBtn"
+                                                 text="🟢 Maintenant (temps réel)"
+                                                 toggleGroup="$modeGroup"
+                                                 selected="true"
+                                                 style="-fx-font-weight:bold;-fx-text-fill:#16a34a;"/>
+                                    <RadioButton fx:id="radioDateHeureBtn"
+                                                 text="📅 Date et heure précises"
+                                                 toggleGroup="$modeGroup"/>
+                                    <HBox fx:id="dateHeureBox" spacing="6" alignment="CENTER_LEFT" disable="true">
+                                        <DatePicker fx:id="datePicker" prefWidth="150" promptText="Date"/>
+                                        <ComboBox fx:id="heureDebutCombo" prefWidth="75" promptText="De"/>
+                                        <ComboBox fx:id="heureFinCombo"   prefWidth="75" promptText="À"/>
+                                    </HBox>
+                                </VBox>
+
+                                <!-- Capacité -->
+                                <VBox spacing="4">
+                                    <Label text="👥 Capacité minimale" styleClass="form-label"/>
+                                    <Spinner fx:id="capaciteSpinner" prefWidth="200" editable="true"/>
+                                </VBox>
+
+                                <!-- Type -->
+                                <VBox spacing="4">
+                                    <Label text="🏫 Type de salle" styleClass="form-label"/>
+                                    <ComboBox fx:id="typeFilter" prefWidth="200"/>
+                                </VBox>
+
+                                <!-- Équipements -->
+                                <VBox spacing="6"
+                                      style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
+                                    <Label text="🔧 Équipements requis" styleClass="form-label"/>
+                                    <CheckBox fx:id="checkProjecteur" text="📽 Vidéoprojecteur"/>
+                                    <CheckBox fx:id="checkTableau"    text="🖊 Tableau interactif"/>
+                                    <CheckBox fx:id="checkClim"       text="❄ Climatisation"/>
+                                    <CheckBox fx:id="checkOrdinateur" text="💻 Ordinateurs"/>
+                                </VBox>
+
+                                <Button text="🔍  Rechercher"
+                                        styleClass="btn-primary" maxWidth="Infinity"
+                                        onAction="#handleRechercherSalles"
+                                        style="-fx-font-size:13px;-fx-padding:10 0;"/>
+
+                                <Label fx:id="resultLabel"
+                                       text="Lancez une recherche pour voir les résultats."
+                                       wrapText="true"
+                                       style="-fx-text-fill:#64748b;-fx-font-size:12px;"/>
+                            </VBox>
+
+                            <!-- Résultats -->
+                            <VBox HBox.hgrow="ALWAYS" spacing="8">
+                                <Label text="Salles disponibles" styleClass="section-title"/>
+                                <TableView fx:id="salleLibreTable" prefHeight="530" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colSalleNum"    text="Salle"                   prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleType"   text="Type"                    prefWidth="65"/>
+                                        <TableColumn fx:id="colSalleCap"    text="Capacité"                prefWidth="75"/>
+                                        <TableColumn fx:id="colSalleBat"    text="Bâtiment"                prefWidth="150"/>
+                                        <TableColumn fx:id="colSalleEquip"  text="Équipements disponibles" prefWidth="220"/>
+                                        <TableColumn fx:id="colSalleStatut" text="Statut"                  prefWidth="90"/>
+                                    </columns>
+                                </TableView>
+                            </VBox>
+                        </HBox>
+                    </Tab>
+
+                </TabPane>
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>

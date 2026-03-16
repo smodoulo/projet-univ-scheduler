@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<AnchorPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.univscheduler.controller.LoginController"
+    style="-fx-background-color: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);"
+    prefWidth="1000" prefHeight="650">
+    <VBox alignment="CENTER" spacing="0"
+          AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+        <VBox styleClass="login-card" alignment="CENTER" spacing="20" maxWidth="460">
+            <VBox alignment="CENTER" spacing="8">
+                <Label text="🎓" style="-fx-font-size:52px;"/>
+                <Label text="UNIV-SCHEDULER" styleClass="login-title"/>
+                <Label text="Gestion Intelligente des Salles et Emplois du Temps" styleClass="login-subtitle" wrapText="true"/>
+            </VBox>
+            <VBox spacing="12" maxWidth="340">
+                <VBox spacing="4">
+                    <Label text="Email" styleClass="form-label-white"/>
+                    <TextField fx:id="emailField" promptText="votre@email.fr" styleClass="login-field"/>
+                </VBox>
+                <VBox spacing="4">
+                    <Label text="Mot de passe" styleClass="form-label-white"/>
+                    <PasswordField fx:id="passwordField" promptText="••••••••" styleClass="login-field"/>
+                </VBox>
+                <Label fx:id="errorLabel" styleClass="error-label" text="" wrapText="true"/>
+                <Button fx:id="loginBtn" text="🔐  SE CONNECTER" styleClass="btn-primary-large" maxWidth="Infinity"/>
+            </VBox>
+
+        </VBox>
+    </VBox>
+</AnchorPane>
