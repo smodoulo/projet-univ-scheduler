@@ -2,13 +2,12 @@ package com.univscheduler.controller;
 
 import com.univscheduler.MainApp;
 import com.univscheduler.model.Utilisateur;
+import com.univscheduler.model.AlertePersonnalisee;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import java.util.Optional;
 
 public abstract class BaseController {
+
     protected Utilisateur currentUser;
 
     public void initUser(Utilisateur user) {
@@ -18,37 +17,62 @@ public abstract class BaseController {
 
     protected void onUserLoaded() {}
 
+    // ── Déconnexion ───────────────────────────────────────────────
     protected void logout() {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Déconnexion");
-        alert.setHeaderText("Voulez-vous vous déconnecter ?");
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/univscheduler/fxml/login.fxml"));
-                Scene scene = new Scene(loader.load(), 1000, 650);
-                scene.getStylesheets().add(getClass().getResource("/com/univscheduler/css/style.css").toExternalForm());
-                MainApp.primaryStage.setScene(scene);
-                MainApp.primaryStage.setMaximized(false);
-            } catch (Exception e) { e.printStackTrace(); }
-        }
+        // ✅ Alerte personnalisée à la place de Alert JavaFX
+        if (!AlertePersonnalisee.confirmerDeconnexion()) return;
+
+        // Arrêter le service de rappel s'il tourne
+        try { com.univscheduler.model.Servicerappel.getInstance().arreter(); }
+        catch (Exception ignored) {}
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/univscheduler/fxml/login.fxml"));
+            Scene scene = new Scene(loader.load(), 1000, 650);
+            scene.getStylesheets().add(
+                    getClass().getResource("/com/univscheduler/css/style.css").toExternalForm());
+            MainApp.primaryStage.setScene(scene);
+            MainApp.primaryStage.setMaximized(false);
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
-    protected void showInfo(String title, String msg) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+    // ── Alertes ───────────────────────────────────────────────────
+
+    /** Alerte succès — bande verte. */
+    protected void showInfo(String titre, String message) {
+        AlertePersonnalisee.succes(titre, message);
     }
 
-    protected void showError(String title, String msg) {
-        Alert a = new Alert(Alert.AlertType.ERROR);
-        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
+    /** Alerte erreur — bande rouge. */
+    protected void showError(String titre, String message) {
+        AlertePersonnalisee.erreur(titre, message);
     }
 
+    /** Alerte avertissement — bande orange. */
+    protected void showWarning(String titre, String message) {
+        AlertePersonnalisee.avertissement(titre, message);
+    }
+
+    /** Alerte information — bande bleue. */
+    protected void showInfoBleu(String titre, String message) {
+        AlertePersonnalisee.info(titre, message);
+    }
+
+    /**
+     * Confirmation de suppression stylisée.
+     * @param item ex : "ce cours", "cette réservation"
+     * @return true si l'utilisateur confirme
+     */
     protected boolean confirmDelete(String item) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Suppression"); alert.setHeaderText("Supprimer " + item + " ?");
-        alert.setContentText("Cette action est irréversible.");
-        Optional<ButtonType> result = alert.showAndWait();
-        return result.isPresent() && result.get() == ButtonType.OK;
+        return AlertePersonnalisee.confirmerSuppression(item);
+    }
+
+    /**
+     * Confirmation générique.
+     * @return true si l'utilisateur confirme
+     */
+    protected boolean confirmer(String titre, String message) {
+        return AlertePersonnalisee.confirmer(titre, message);
     }
 }

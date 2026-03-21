@@ -96,11 +96,13 @@ public class DatabaseManager {
                     + "FOREIGN KEY(creneau_id) REFERENCES creneaux(id),"
                     + "FOREIGN KEY(salle_id) REFERENCES salles(id))");
 
+            // ✅ MODIFIÉ : ajout de la colonne date_fin
             stmt.execute("CREATE TABLE IF NOT EXISTS reservations ("
                     + "id INT PRIMARY KEY AUTO_INCREMENT,"
                     + "motif TEXT,"
                     + "statut VARCHAR(20) DEFAULT 'EN_ATTENTE',"
                     + "date_reservation TEXT,"
+                    + "date_fin TEXT,"
                     + "salle_id INT,"
                     + "utilisateur_id INT,"
                     + "FOREIGN KEY(salle_id) REFERENCES salles(id),"
@@ -114,6 +116,21 @@ public class DatabaseManager {
                     + "type VARCHAR(20) DEFAULT 'INFO',"
                     + "utilisateur_id INT,"
                     + "FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id))");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS signalements ("
+                    + "id               INT PRIMARY KEY AUTO_INCREMENT,"
+                    + "titre            VARCHAR(200) NOT NULL,"
+                    + "description      TEXT,"
+                    + "categorie        VARCHAR(30)  DEFAULT 'AUTRE',"
+                    + "priorite         VARCHAR(20)  DEFAULT 'NORMALE',"
+                    + "statut           VARCHAR(20)  DEFAULT 'EN_ATTENTE',"
+                    + "date_signalement TEXT,"
+                    + "date_resolution  TEXT,"
+                    + "commentaire_admin TEXT,"
+                    + "enseignant_id    INT,"
+                    + "salle_id         INT,"
+                    + "FOREIGN KEY(enseignant_id) REFERENCES utilisateurs(id),"
+                    + "FOREIGN KEY(salle_id)      REFERENCES salles(id))");
 
             insertDemoData(conn);
             System.out.println("DB initialisee avec succes.");
@@ -149,6 +166,7 @@ public class DatabaseManager {
         PreparedStatement ins = conn.prepareStatement(
                 "INSERT INTO utilisateurs (nom,prenom,email,mot_de_passe,role) VALUES (?,?,?,?,?)",
                 Statement.RETURN_GENERATED_KEYS);
+
         for (int i = 0; i < users.length; i++) {
             chk.setString(1, users[i][2]);
             ResultSet rs = chk.executeQuery();
@@ -159,7 +177,8 @@ public class DatabaseManager {
                 ins.setString(3, users[i][2]); ins.setString(4, users[i][3]);
                 ins.setString(5, users[i][4]);
                 ins.executeUpdate();
-                uids[i] = ins.getGeneratedKeys().getInt(1);
+                ResultSet gk = ins.getGeneratedKeys();
+                if (gk.next()) uids[i] = gk.getInt(1);
             }
         }
 
@@ -269,16 +288,18 @@ public class DatabaseManager {
 
         ResultSet rr = conn.createStatement().executeQuery("SELECT COUNT(*) FROM reservations");
         if (rr.next() && rr.getInt(1) == 0) {
+            // ✅ MODIFIÉ : INSERT inclut maintenant date_fin (= date_reservation + 2h)
             PreparedStatement ir = conn.prepareStatement(
-                    "INSERT INTO reservations(motif,statut,date_reservation,salle_id,utilisateur_id) VALUES(?,?,?,?,?)");
-            ir.setString(1,"Soutenance de projet L3");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-25T09:00:00"); ir.setInt(4,s1);  ir.setInt(5,uids[3]); ir.executeUpdate();
-            ir.setString(1,"Reunion pedagogique UFR");      ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-20T14:00:00"); ir.setInt(4,s2);  ir.setInt(5,uids[1]); ir.executeUpdate();
-            ir.setString(1,"Examen de rattrapage L2");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-27T08:00:00"); ir.setInt(4,s3);  ir.setInt(5,uids[4]); ir.executeUpdate();
-            ir.setString(1,"Conference Numerique Senegal"); ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-22T10:00:00"); ir.setInt(4,s1);  ir.setInt(5,uids[2]); ir.executeUpdate();
-            ir.setString(1,"Hackathon etudiant");           ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-28T08:00:00"); ir.setInt(4,s8);  ir.setInt(5,uids[5]); ir.executeUpdate();
-            ir.setString(1,"Atelier IA et Donnees");        ir.setString(2,"REFUSEE");    ir.setString(3,"2026-03-18T15:00:00"); ir.setInt(4,s10); ir.setInt(5,uids[6]); ir.executeUpdate();
-            ir.setString(1,"Seance de tutorat L1");         ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-21T16:00:00"); ir.setInt(4,s4);  ir.setInt(5,uids[3]); ir.executeUpdate();
-            ir.setString(1,"Presentation PFE Master");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-30T09:00:00"); ir.setInt(4,s1);  ir.setInt(5,uids[4]); ir.executeUpdate();
+                    "INSERT INTO reservations(motif,statut,date_reservation,date_fin,salle_id,utilisateur_id) VALUES(?,?,?,?,?,?)");
+
+            ir.setString(1,"Soutenance de projet L3");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-25T09:00:00"); ir.setString(4,"2026-03-25T11:00:00"); ir.setInt(5,s1);  ir.setInt(6,uids[3]); ir.executeUpdate();
+            ir.setString(1,"Reunion pedagogique UFR");      ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-20T14:00:00"); ir.setString(4,"2026-03-20T16:00:00"); ir.setInt(5,s2);  ir.setInt(6,uids[1]); ir.executeUpdate();
+            ir.setString(1,"Examen de rattrapage L2");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-27T08:00:00"); ir.setString(4,"2026-03-27T10:00:00"); ir.setInt(5,s3);  ir.setInt(6,uids[4]); ir.executeUpdate();
+            ir.setString(1,"Conference Numerique Senegal"); ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-22T10:00:00"); ir.setString(4,"2026-03-22T12:00:00"); ir.setInt(5,s1);  ir.setInt(6,uids[2]); ir.executeUpdate();
+            ir.setString(1,"Hackathon etudiant");           ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-28T08:00:00"); ir.setString(4,"2026-03-28T10:00:00"); ir.setInt(5,s8);  ir.setInt(6,uids[5]); ir.executeUpdate();
+            ir.setString(1,"Atelier IA et Donnees");        ir.setString(2,"REFUSEE");    ir.setString(3,"2026-03-18T15:00:00"); ir.setString(4,"2026-03-18T17:00:00"); ir.setInt(5,s10); ir.setInt(6,uids[6]); ir.executeUpdate();
+            ir.setString(1,"Seance de tutorat L1");         ir.setString(2,"VALIDEE");    ir.setString(3,"2026-03-21T16:00:00"); ir.setString(4,"2026-03-21T18:00:00"); ir.setInt(5,s4);  ir.setInt(6,uids[3]); ir.executeUpdate();
+            ir.setString(1,"Presentation PFE Master");      ir.setString(2,"EN_ATTENTE"); ir.setString(3,"2026-03-30T09:00:00"); ir.setString(4,"2026-03-30T11:00:00"); ir.setInt(5,s1);  ir.setInt(6,uids[4]); ir.executeUpdate();
         }
         System.out.println("Donnees demo senegalaises OK.");
     }
@@ -290,7 +311,9 @@ public class DatabaseManager {
         if (rs.next()) return rs.getInt("id");
         PreparedStatement ins = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
         ins.executeUpdate();
-        return ins.getGeneratedKeys().getInt(1);
+        ResultSet gk = ins.getGeneratedKeys();
+        if (gk.next()) return gk.getInt(1);
+        throw new SQLException("Impossible de récupérer l'ID généré pour " + table);
     }
 
     private int getOrInsSalle(Connection conn, String num, int cap, String type, int batId) throws SQLException {
@@ -303,7 +326,9 @@ public class DatabaseManager {
                 Statement.RETURN_GENERATED_KEYS);
         ins.setString(1, num); ins.setInt(2, cap); ins.setString(3, type); ins.setInt(4, batId);
         ins.executeUpdate();
-        return ins.getGeneratedKeys().getInt(1);
+        ResultSet gk = ins.getGeneratedKeys();
+        if (gk.next()) return gk.getInt(1);
+        throw new SQLException("Impossible de récupérer l'ID généré pour salle " + num);
     }
 
     private void getOrInsEquip(Connection conn, String nom, String desc, String type, int salleId) throws SQLException {
@@ -326,7 +351,9 @@ public class DatabaseManager {
                 Statement.RETURN_GENERATED_KEYS);
         ins.setString(1, nom); ins.setString(2, desc); ins.setInt(3, cm); ins.setInt(4, td);
         ins.executeUpdate();
-        return ins.getGeneratedKeys().getInt(1);
+        ResultSet gk = ins.getGeneratedKeys();
+        if (gk.next()) return gk.getInt(1);
+        throw new SQLException("Impossible de récupérer l'ID généré pour matiere " + nom);
     }
 
     private int getOrInsCls(Connection conn, String nom, String niv, int eff) throws SQLException {
@@ -339,7 +366,9 @@ public class DatabaseManager {
                 Statement.RETURN_GENERATED_KEYS);
         ins.setString(1, nom); ins.setString(2, niv); ins.setInt(3, eff);
         ins.executeUpdate();
-        return ins.getGeneratedKeys().getInt(1);
+        ResultSet gk = ins.getGeneratedKeys();
+        if (gk.next()) return gk.getInt(1);
+        throw new SQLException("Impossible de récupérer l'ID généré pour classe " + nom);
     }
 
     private int getOrInsCren(Connection conn, String jour, int heure, int duree) throws SQLException {
@@ -353,7 +382,9 @@ public class DatabaseManager {
                 Statement.RETURN_GENERATED_KEYS);
         ins.setString(1, jour); ins.setInt(2, heure); ins.setInt(3, duree);
         ins.executeUpdate();
-        return ins.getGeneratedKeys().getInt(1);
+        ResultSet gk = ins.getGeneratedKeys();
+        if (gk.next()) return gk.getInt(1);
+        throw new SQLException("Impossible de récupérer l'ID généré pour creneau " + jour + " " + heure);
     }
 
     private void insCours(Connection conn, String statut, String date,

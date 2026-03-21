@@ -27,19 +27,23 @@
                 </HBox>
                 <TabPane>
 
-                    <!-- ─── EDT ─── -->
+                    <!-- ─── ONGLET 1 : EDT ─── -->
                     <Tab text="📅 Mon Emploi du Temps" closable="false">
                         <HBox spacing="16">
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Mes cours assignés" styleClass="section-title"/>
                                 <TableView fx:id="coursTable" prefHeight="400" styleClass="data-table">
                                     <columns>
-                                        <TableColumn fx:id="colMat"    text="Matière"  prefWidth="160"/>
-                                        <TableColumn fx:id="colCls"    text="Classe"   prefWidth="100"/>
-                                        <TableColumn fx:id="colCren"   text="Créneau"  prefWidth="120"/>
-                                        <TableColumn fx:id="colSalle"  text="Salle"    prefWidth="80"/>
-                                        <TableColumn fx:id="colDate"   text="Date"     prefWidth="100"/>
-                                        <TableColumn fx:id="colStatut" text="Statut"   prefWidth="100"/>
+                                        <TableColumn fx:id="colMat"        text="Matière"  prefWidth="150"/>
+                                        <TableColumn fx:id="colCls"        text="Classe"   prefWidth="95"/>
+                                        <!-- ✅ Créneau → Jour uniquement -->
+                                        <TableColumn fx:id="colCren"       text="Jour"     prefWidth="90"/>
+                                        <!-- ✅ AJOUT : Début et Fin -->
+                                        <TableColumn fx:id="colHeureDebut" text="Début"    prefWidth="60"/>
+                                        <TableColumn fx:id="colHeureFin"   text="Fin"      prefWidth="60"/>
+                                        <TableColumn fx:id="colSalle"      text="Salle"    prefWidth="75"/>
+                                        <TableColumn fx:id="colDate"       text="Date"     prefWidth="100"/>
+                                        <TableColumn fx:id="colStatut"     text="Statut"   prefWidth="95"/>
                                     </columns>
                                 </TableView>
                                 <HBox spacing="8">
@@ -47,6 +51,7 @@
                                     <Button text="📊 Export Excel" styleClass="btn-secondary" onAction="#handleExportExcel"/>
                                 </HBox>
                             </VBox>
+                            <!-- ✅ Graphique avec label amélioré -->
                             <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
                                 <Label text="📊 Mes Cours par Statut" styleClass="form-title"/>
                                 <VBox fx:id="chartEnsContainer" minHeight="220"/>
@@ -54,13 +59,10 @@
                         </HBox>
                     </Tab>
 
-                    <!-- ─── RÉSERVATION AVEC RECHERCHE ─── -->
+                    <!-- ─── ONGLET 2 : RÉSERVATION ─── -->
                     <Tab text="📌 Réserver une Salle" closable="false">
                         <HBox spacing="16">
-
-                            <!-- Résultats recherche + liste réservations -->
                             <VBox HBox.hgrow="ALWAYS" spacing="12">
-                                <!-- Mini-recherche rapide -->
                                 <VBox styleClass="form-panel" spacing="10">
                                     <Label text="🔍 Recherche rapide de salle disponible" styleClass="form-title"/>
                                     <HBox spacing="10" alignment="CENTER_LEFT">
@@ -69,7 +71,7 @@
                                         <Label text="De :" styleClass="form-label"/>
                                         <ComboBox fx:id="heureDebutCombo" prefWidth="85"/>
                                         <Label text="À :" styleClass="form-label"/>
-                                        <ComboBox fx:id="heureFinCombo"   prefWidth="85"/>
+                                        <ComboBox fx:id="heureFinCombo" prefWidth="85"/>
                                         <Label text="Cap.≥" styleClass="form-label"/>
                                         <Spinner fx:id="capaciteSpinner" prefWidth="75" editable="true"/>
                                     </HBox>
@@ -84,16 +86,14 @@
                                     <Label fx:id="resultLabel" text="" style="-fx-font-size:12px;" wrapText="true"/>
                                     <TableView fx:id="salleLibreTable" prefHeight="180" styleClass="data-table">
                                         <columns>
-                                            <TableColumn fx:id="colSalleNum"   text="Salle"      prefWidth="80"/>
-                                            <TableColumn fx:id="colSalleType"  text="Type"       prefWidth="70"/>
-                                            <TableColumn fx:id="colSalleCap"   text="Capacité"   prefWidth="80"/>
-                                            <TableColumn fx:id="colSalleBat"   text="Bâtiment"   prefWidth="140"/>
+                                            <TableColumn fx:id="colSalleNum"   text="Salle"       prefWidth="80"/>
+                                            <TableColumn fx:id="colSalleType"  text="Type"        prefWidth="70"/>
+                                            <TableColumn fx:id="colSalleCap"   text="Capacité"    prefWidth="80"/>
+                                            <TableColumn fx:id="colSalleBat"   text="Bâtiment"    prefWidth="140"/>
                                             <TableColumn fx:id="colSalleEquip" text="Équipements" prefWidth="200"/>
                                         </columns>
                                     </TableView>
                                 </VBox>
-
-                                <!-- Mes réservations -->
                                 <VBox spacing="8">
                                     <Label text="Mes réservations" styleClass="section-title"/>
                                     <TableView fx:id="reservTable" prefHeight="220" styleClass="data-table">
@@ -108,50 +108,97 @@
                                 </VBox>
                             </VBox>
 
-                            <!-- Formulaire de réservation -->
                             <VBox styleClass="form-panel" spacing="12" minWidth="270" maxWidth="270">
                                 <Label text="📋 Nouvelle Réservation" styleClass="form-title"/>
-
                                 <Label text="Salle choisie" styleClass="form-label"/>
                                 <ComboBox fx:id="salleReservCombo" maxWidth="Infinity" promptText="Sélectionner..."/>
-
                                 <Label text="Date" styleClass="form-label"/>
                                 <DatePicker fx:id="dateReservPicker" maxWidth="Infinity"/>
-
                                 <Label text="Heure de début" styleClass="form-label"/>
                                 <ComboBox fx:id="heureReservCombo" maxWidth="Infinity"/>
-
+                                <Label text="Heure de fin" styleClass="form-label"/>
+                                <ComboBox fx:id="heureFinReservCombo" maxWidth="Infinity"/>
                                 <Label text="Motif" styleClass="form-label"/>
-                                <TextField fx:id="motifField"
-                                           promptText="Ex: Soutenance, Réunion..."
-                                           styleClass="form-field"/>
-
-                                <!-- Indicateur conflit -->
+                                <TextField fx:id="motifField" promptText="Ex: Soutenance, Réunion..." styleClass="form-field"/>
                                 <Label fx:id="conflitReservLabel" text="" wrapText="true"
                                        style="-fx-font-size:11px;" visible="false"/>
-
-                                <Button text="📨 Enregistrer la réservation"
-                                        styleClass="btn-primary" maxWidth="Infinity"
-                                        onAction="#handleSaveReservation"/>
-
+                                <Button text="📨 Enregistrer la réservation" styleClass="btn-primary"
+                                        maxWidth="Infinity" onAction="#handleSaveReservation"/>
                                 <Label text="ℹ La réservation sera soumise à validation."
                                        style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"/>
                             </VBox>
                         </HBox>
                     </Tab>
 
-                    <!-- ─── SIGNALEMENT ─── -->
+                    <!-- ─── ONGLET 3 : SIGNALEMENT ─── -->
                     <Tab text="⚠ Signaler un Problème" closable="false">
-                        <VBox spacing="12" style="-fx-padding:16;">
-                            <Label text="Signalement de problème technique" styleClass="form-title"/>
-                            <Label text="Décrivez le problème (salle, équipement, date...)" styleClass="form-label"/>
-                            <TextArea fx:id="problemeArea" prefHeight="120" wrapText="true"
-                                      promptText="Ex: Vidéoprojecteur en panne salle A101..."/>
-                            <Button text="📤 Envoyer le signalement" styleClass="btn-primary" onAction="#handleSendProbleme"/>
-                        </VBox>
+                        <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
+                            <VBox spacing="16" style="-fx-padding:16;">
+                                <VBox spacing="12" styleClass="form-panel">
+                                    <Label text="📋 Nouveau Signalement" styleClass="form-title"/>
+                                    <VBox spacing="4">
+                                        <Label text="Titre  *  (obligatoire)"
+                                               style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#dc2626;"/>
+                                        <TextField fx:id="sigTitreField"
+                                                   promptText="Ex: Vidéoprojecteur en panne, Tableau cassé..."
+                                                   styleClass="form-field"/>
+                                    </VBox>
+                                    <HBox spacing="12">
+                                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                            <Label text="Catégorie" styleClass="form-label"/>
+                                            <ComboBox fx:id="sigCategorieCombo" maxWidth="Infinity"/>
+                                        </VBox>
+                                        <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                            <Label text="Priorité" styleClass="form-label"/>
+                                            <ComboBox fx:id="sigPrioriteCombo" maxWidth="Infinity"/>
+                                        </VBox>
+                                    </HBox>
+                                    <VBox spacing="4">
+                                        <Label text="Salle concernée  (optionnel)" styleClass="form-label"/>
+                                        <ComboBox fx:id="sigSalleCombo" maxWidth="Infinity"
+                                                  promptText="Sélectionnez la salle..."/>
+                                    </VBox>
+                                    <VBox spacing="4">
+                                        <Label text="Description du problème" styleClass="form-label"/>
+                                        <TextArea fx:id="sigDescArea"
+                                                  promptText="Décrivez le problème : depuis quand, symptômes observés..."
+                                                  prefRowCount="4" wrapText="true"/>
+                                    </VBox>
+                                    <Label fx:id="sigFeedbackLabel" text="" visible="false" wrapText="true"
+                                           style="-fx-font-size:13px;-fx-font-weight:bold;-fx-padding:6 10;-fx-background-radius:6;"/>
+                                    <HBox alignment="CENTER_RIGHT">
+                                        <Button text="📤  Envoyer le signalement" styleClass="btn-primary"
+                                                onAction="#handleSendProbleme" style="-fx-padding:10 24;"/>
+                                    </HBox>
+                                </VBox>
+                                <VBox spacing="10" styleClass="form-panel">
+                                    <HBox alignment="CENTER_LEFT" spacing="12">
+                                        <Label text="📋  Mes Signalements" styleClass="form-title" HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="sigBadge" text="" visible="false"
+                                               style="-fx-background-color:#dcfce7;-fx-text-fill:#166534;-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;"/>
+                                        <Button text="🔍 Voir détail" styleClass="btn-secondary" onAction="#handleVoirMonSignalement"/>
+                                        <Button text="🔄 Actualiser"  styleClass="btn-secondary" onAction="#handleRefresh"/>
+                                    </HBox>
+                                    <TableView fx:id="mesSignalementsTable" prefHeight="240" styleClass="data-table">
+                                        <columns>
+                                            <TableColumn fx:id="colSigTitre"  text="Titre"     prefWidth="220"/>
+                                            <TableColumn fx:id="colSigCat"    text="Catégorie" prefWidth="110"/>
+                                            <TableColumn fx:id="colSigPrio"   text="Priorité"  prefWidth="110"/>
+                                            <TableColumn fx:id="colSigStatut" text="Statut"    prefWidth="130"/>
+                                            <TableColumn fx:id="colSigDate"   text="Date"      prefWidth="100"/>
+                                            <TableColumn fx:id="colSigSalle"  text="Salle"     prefWidth="80"/>
+                                        </columns>
+                                        <placeholder>
+                                            <Label text="Aucun signalement pour le moment."
+                                                   style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                        </placeholder>
+                                    </TableView>
+                                </VBox>
+                            </VBox>
+                        </ScrollPane>
                     </Tab>
 
-                    <!-- ─── NOTIFICATIONS ─── -->
+                    <!-- ─── ONGLET 4 : NOTIFICATIONS ─── -->
                     <Tab text="🔔 Notifications" closable="false">
                         <VBox spacing="10">
                             <HBox alignment="CENTER_LEFT" spacing="12">

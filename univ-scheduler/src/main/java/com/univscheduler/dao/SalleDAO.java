@@ -31,7 +31,6 @@ public class SalleDAO {
                                               LocalDate date, Integer heureDebut, Integer heureFin,
                                               List<String> equipements) {
         List<Salle> all = new ArrayList<>();
-
         StringBuilder sql = new StringBuilder(
                 "SELECT s.*, b.nom as bat_nom FROM salles s " +
                         "LEFT JOIN batiments b ON s.batiment_id = b.id " +
@@ -75,6 +74,66 @@ public class SalleDAO {
         return all;
     }
 
+    // ✅ AJOUT : Assignation automatique — meilleure salle pour un cours
+    /**
+     * Trouve la meilleure salle disponible pour un cours.
+     *
+     * Critères :
+     *  1. Disponible (disponible = 1)
+     *  2. Pas de conflit sur ce créneau + date
+     *  3. Capacité >= effectif de la classe
+     *  4. Capacité la plus proche de l'effectif (évite le gaspillage)
+     *
+     * @param effectif    nombre d'étudiants dans la classe
+     * @param creneauId   id du créneau choisi
+     * @param date        date du cours (format "yyyy-MM-dd")
+     * @param exclCoursId id du cours à exclure pour la modif (0 si création)
+     * @return la meilleure Salle, ou null si aucune disponible
+     */
+    public Salle trouverMeilleureSalle(int effectif, int creneauId, String date, int exclCoursId) {
+        List<Salle> candidates = trouverSallesDisponiblesPourCours(effectif, creneauId, date, exclCoursId);
+        if (candidates.isEmpty()) return null;
+        // Déjà triées par capacité croissante → première = plus proche de l'effectif
+        return candidates.get(0);
+    }
+
+    /**
+     * Retourne TOUTES les salles disponibles pour un cours (pour proposer des alternatives).
+     *
+     * @param effectif    nombre d'étudiants dans la classe
+     * @param creneauId   id du créneau choisi
+     * @param date        date du cours (format "yyyy-MM-dd")
+     * @param exclCoursId id du cours à exclure (0 si création)
+     * @return liste triée par capacité croissante
+     */
+    public List<Salle> trouverSallesDisponiblesPourCours(int effectif, int creneauId,
+                                                         String date, int exclCoursId) {
+        List<Salle> result = new ArrayList<>();
+        // Salles libres sur ce créneau+date avec capacité suffisante
+        String sql = "SELECT s.*, b.nom as bat_nom FROM salles s "
+                + "LEFT JOIN batiments b ON s.batiment_id = b.id "
+                + "WHERE s.disponible = 1 AND s.capacite >= ? "
+                + "AND s.id NOT IN ("
+                + "  SELECT c.salle_id FROM cours c "
+                + "  WHERE c.creneau_id = ? AND c.date = ? AND c.id != ?"
+                + ") "
+                + "ORDER BY s.capacite ASC"; // ← plus proche en premier
+        try (Connection conn = db.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, effectif);
+            ps.setInt(2, creneauId);
+            ps.setString(3, date);
+            ps.setInt(4, exclCoursId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Salle s = map(rs);
+                s.setBatimentNom(rs.getString("bat_nom"));
+                result.add(s);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return result;
+    }
+
     private Set<Integer> getSallesOccupeesCours(LocalDate date, int heureDebut, int heureFin) {
         Set<Integer> ids = new HashSet<>();
         String sql = "SELECT DISTINCT c.salle_id FROM cours c " +
@@ -95,7 +154,6 @@ public class SalleDAO {
 
     private Set<Integer> getSallesOccupeesReservations(LocalDate date, int heureDebut, int heureFin) {
         Set<Integer> ids = new HashSet<>();
-        // ← CORRECTION : SUBSTRING() au lieu de substr() (syntaxe MySQL)
         String sql = "SELECT DISTINCT salle_id, date_reservation FROM reservations " +
                 "WHERE statut = 'VALIDEE' " +
                 "AND SUBSTRING(date_reservation, 1, 10) = ?";
@@ -131,7 +189,7 @@ public class SalleDAO {
                 ps.setInt(1, salleId);
                 ps.setString(2, t);
                 ResultSet rs = ps.executeQuery();
-                if (rs.next() && rs.getInt(1) == 0) return false; // ← rs.next() ajouté
+                if (rs.next() && rs.getInt(1) == 0) return false;
             } catch (SQLException e) { e.printStackTrace(); return false; }
         }
         return true;
@@ -175,7 +233,7 @@ public class SalleDAO {
     public int countDisponibles() {
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM salles WHERE disponible = 1");
-            if (rs.next()) return rs.getInt(1); // ← rs.next() ajouté
+            if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
     }
@@ -214,7 +272,7 @@ public class SalleDAO {
     public int count() {
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM salles");
-            if (rs.next()) return rs.getInt(1); // ← rs.next() ajouté
+            if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
     }

@@ -28,6 +28,7 @@
                 </HBox>
 
                 <TabPane>
+
                     <!-- Tab 1: Cours -->
                     <Tab text="📋 Emploi du Temps" closable="false">
                         <HBox spacing="16">
@@ -35,41 +36,46 @@
                                 <Label text="Tous les Cours" styleClass="section-title"/>
                                 <TableView fx:id="coursTable" prefHeight="480" styleClass="data-table">
                                     <columns>
-                                        <TableColumn fx:id="colMat" text="Matière" prefWidth="140"/>
-                                        <TableColumn fx:id="colEns" text="Enseignant" prefWidth="130"/>
-                                        <TableColumn fx:id="colCls" text="Classe" prefWidth="100"/>
-                                        <TableColumn fx:id="colCren" text="Créneau" prefWidth="110"/>
-                                        <TableColumn fx:id="colSalle" text="Salle" prefWidth="70"/>
-                                        <TableColumn fx:id="colDate" text="Date" prefWidth="90"/>
-                                        <TableColumn fx:id="colStatut" text="Statut" prefWidth="90"/>
+                                        <TableColumn fx:id="colMat"    text="Matière"    prefWidth="140"/>
+                                        <TableColumn fx:id="colEns"    text="Enseignant" prefWidth="130"/>
+                                        <TableColumn fx:id="colCls"    text="Classe"     prefWidth="100"/>
+                                        <TableColumn fx:id="colCren"   text="Créneau"    prefWidth="110"/>
+                                        <TableColumn fx:id="colSalle"  text="Salle"      prefWidth="70"/>
+                                        <TableColumn fx:id="colDate"   text="Date"       prefWidth="90"/>
+                                        <TableColumn fx:id="colStatut" text="Statut"     prefWidth="90"/>
                                     </columns>
                                 </TableView>
                                 <HBox spacing="8">
-                                    <Button text="📄 Export PDF" styleClass="btn-secondary" onAction="#handleExportPDF"/>
+                                    <Button text="📄 Export PDF"   styleClass="btn-secondary" onAction="#handleExportPDF"/>
                                     <Button text="📊 Export Excel" styleClass="btn-secondary" onAction="#handleExportExcel"/>
                                 </HBox>
                             </VBox>
                             <VBox styleClass="form-panel" spacing="10" minWidth="290" maxWidth="290">
                                 <Label fx:id="coursFormTitle" text="Nouveau Cours" styleClass="form-title"/>
                                 <Label fx:id="conflitLabel" text="" wrapText="true" maxWidth="270"/>
-                                <Label text="Matière" styleClass="form-label"/>
-                                <ComboBox fx:id="matiereCombo" maxWidth="Infinity"/>
+                                <Label text="Matière"    styleClass="form-label"/>
+                                <ComboBox fx:id="matiereCombo"    maxWidth="Infinity"/>
                                 <Label text="Enseignant" styleClass="form-label"/>
                                 <ComboBox fx:id="enseignantCombo" maxWidth="Infinity"/>
-                                <Label text="Classe" styleClass="form-label"/>
-                                <ComboBox fx:id="classeCombo" maxWidth="Infinity"/>
-                                <Label text="Créneau" styleClass="form-label"/>
-                                <ComboBox fx:id="creneauCombo" maxWidth="Infinity"/>
+                                <Label text="Classe"     styleClass="form-label"/>
+                                <ComboBox fx:id="classeCombo"     maxWidth="Infinity"/>
+                                <Label text="Créneau"    styleClass="form-label"/>
+                                <ComboBox fx:id="creneauCombo"    maxWidth="Infinity"/>
+                                <Label text="Date"       styleClass="form-label"/>
+                                <DatePicker fx:id="datePicker"    maxWidth="Infinity"/>
                                 <Label text="Salle" styleClass="form-label"/>
                                 <ComboBox fx:id="salleCombo" maxWidth="Infinity"/>
-                                <Label text="Date" styleClass="form-label"/>
-                                <DatePicker fx:id="datePicker" maxWidth="Infinity"/>
-                                <Label text="Statut" styleClass="form-label"/>
-                                <ComboBox fx:id="statutCombo" maxWidth="Infinity"/>
-                                <Button text="💾 Sauvegarder" styleClass="btn-primary" onAction="#handleSaveCours" maxWidth="Infinity"/>
+                                <!-- ✅ AJOUT : suggestion automatique de salle -->
+                                <Label fx:id="salleAutoLabel" text="" wrapText="true" visible="false"
+                                       maxWidth="Infinity"
+                                       style="-fx-font-size:11px;-fx-font-weight:bold;
+                                              -fx-padding:6 10;-fx-background-radius:6;"/>
+                                <Label text="Statut"     styleClass="form-label"/>
+                                <ComboBox fx:id="statutCombo"     maxWidth="Infinity"/>
+                                <Button text="💾 Sauvegarder" styleClass="btn-primary"   onAction="#handleSaveCours"   maxWidth="Infinity"/>
                                 <HBox spacing="6">
-                                    <Button text="🗑 Supprimer" styleClass="btn-danger" onAction="#handleDeleteCours" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                                    <Button text="✕ Annuler" styleClass="btn-secondary" onAction="#handleClearCours" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="🗑 Supprimer" styleClass="btn-danger"    onAction="#handleDeleteCours" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                    <Button text="✕ Annuler"   styleClass="btn-secondary" onAction="#handleClearCours"  HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
                                 </HBox>
                             </VBox>
                         </HBox>
@@ -78,14 +84,28 @@
                     <!-- Tab 2: Calendrier -->
                     <Tab text="📅 Vue Calendrier" closable="false">
                         <VBox spacing="10">
-                            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding:8;-fx-background-color:white;-fx-background-radius:8;">
-                                <Button text="◀ Semaine préc." styleClass="btn-secondary" onAction="#handlePrevWeek"/>
-                                <Label fx:id="calendarWeekLabel" text="Semaine courante" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+                            <HBox alignment="CENTER_LEFT" spacing="8"
+                                  style="-fx-padding:8;-fx-background-color:white;-fx-background-radius:8;">
+                                <Button text="◀ Préc."        styleClass="btn-secondary" onAction="#handlePrevWeek"/>
+                                <Label fx:id="calendarWeekLabel" text="Semaine courante"
+                                       styleClass="section-title" HBox.hgrow="ALWAYS"/>
                                 <Button text="📅 Aujourd'hui" styleClass="btn-secondary" onAction="#handleTodayWeek"/>
-                                <Button text="Semaine suiv. ▶" styleClass="btn-secondary" onAction="#handleNextWeek"/>
+                                <Button text="Suiv. ▶"        styleClass="btn-secondary" onAction="#handleNextWeek"/>
+                                <Separator orientation="VERTICAL"/>
+                                <Button fx:id="btnVueSemaine" text="📋 Semaine"
+                                        onAction="#handleVueSemaine"
+                                        style="-fx-background-color:#1e293b;-fx-text-fill:white;
+                                               -fx-font-weight:bold;-fx-padding:6 14;
+                                               -fx-background-radius:8;-fx-cursor:hand;"/>
+                                <Button fx:id="btnVueMois" text="🗓 Mois"
+                                        onAction="#handleVueMois"
+                                        style="-fx-background-color:#e2e8f0;-fx-text-fill:#1e293b;
+                                               -fx-font-weight:bold;-fx-padding:6 14;
+                                               -fx-background-radius:8;-fx-cursor:hand;"/>
                             </HBox>
                             <ScrollPane fitToWidth="true" fitToHeight="false" prefHeight="540">
-                                <GridPane fx:id="calendarGrid" hgap="0" vgap="0" style="-fx-background-color:#e2e8f0;"/>
+                                <GridPane fx:id="calendarGrid" hgap="0" vgap="0"
+                                          style="-fx-background-color:#e2e8f0;"/>
                             </ScrollPane>
                         </VBox>
                     </Tab>
@@ -96,37 +116,38 @@
                             <Label text="Demandes en Attente de Validation" styleClass="section-title"/>
                             <TableView fx:id="reservTable" prefHeight="380" styleClass="data-table">
                                 <columns>
-                                    <TableColumn fx:id="colResUser" text="Demandeur" prefWidth="150"/>
-                                    <TableColumn fx:id="colResMotif" text="Motif" prefWidth="200"/>
-                                    <TableColumn fx:id="colResSalle" text="Salle" prefWidth="80"/>
-                                    <TableColumn fx:id="colResDate" text="Date" prefWidth="100"/>
-                                    <TableColumn fx:id="colResStatut" text="Statut" prefWidth="110"/>
+                                    <TableColumn fx:id="colResUser"   text="Demandeur" prefWidth="150"/>
+                                    <TableColumn fx:id="colResMotif"  text="Motif"     prefWidth="200"/>
+                                    <TableColumn fx:id="colResSalle"  text="Salle"     prefWidth="80"/>
+                                    <TableColumn fx:id="colResDate"   text="Date"      prefWidth="100"/>
+                                    <TableColumn fx:id="colResStatut" text="Statut"    prefWidth="110"/>
                                 </columns>
                             </TableView>
                             <HBox spacing="12" alignment="CENTER_LEFT">
                                 <Button text="✅ Valider" onAction="#handleValiderReserv"
-                                    style="-fx-background-color:#10b981;-fx-text-fill:white;-fx-font-weight:bold;-fx-padding:8 18;-fx-background-radius:8;-fx-cursor:hand;"/>
+                                        style="-fx-background-color:#10b981;-fx-text-fill:white;-fx-font-weight:bold;-fx-padding:8 18;-fx-background-radius:8;-fx-cursor:hand;"/>
                                 <Button text="❌ Refuser" onAction="#handleRefuserReserv"
-                                    style="-fx-background-color:#ef4444;-fx-text-fill:white;-fx-font-weight:bold;-fx-padding:8 18;-fx-background-radius:8;-fx-cursor:hand;"/>
+                                        style="-fx-background-color:#ef4444;-fx-text-fill:white;-fx-font-weight:bold;-fx-padding:8 18;-fx-background-radius:8;-fx-cursor:hand;"/>
                             </HBox>
                         </VBox>
                     </Tab>
 
-                    <!-- Tab 4: Historique des réservations -->
+                    <!-- Tab 4: Historique -->
                     <Tab text="📜 Historique" closable="false">
                         <VBox spacing="10">
                             <HBox alignment="CENTER_LEFT" spacing="12">
-                                <Label text="Historique Complet des Réservations" styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="📄 Export PDF" styleClass="btn-secondary" onAction="#handleExportHistoriquePDF"/>
+                                <Label text="Historique Complet des Réservations"
+                                       styleClass="section-title" HBox.hgrow="ALWAYS"/>
+                                <Button text="📄 Export PDF"   styleClass="btn-secondary" onAction="#handleExportHistoriquePDF"/>
                                 <Button text="📊 Export Excel" styleClass="btn-secondary" onAction="#handleExportHistoriqueExcel"/>
                             </HBox>
                             <TableView fx:id="historiqueTable" prefHeight="460" styleClass="data-table">
                                 <columns>
-                                    <TableColumn fx:id="colHistUser" text="Demandeur" prefWidth="150"/>
-                                    <TableColumn fx:id="colHistMotif" text="Motif" prefWidth="200"/>
-                                    <TableColumn fx:id="colHistSalle" text="Salle" prefWidth="80"/>
-                                    <TableColumn fx:id="colHistDate" text="Date" prefWidth="120"/>
-                                    <TableColumn fx:id="colHistStatut" text="Statut" prefWidth="120"/>
+                                    <TableColumn fx:id="colHistUser"   text="Demandeur" prefWidth="150"/>
+                                    <TableColumn fx:id="colHistMotif"  text="Motif"     prefWidth="200"/>
+                                    <TableColumn fx:id="colHistSalle"  text="Salle"     prefWidth="80"/>
+                                    <TableColumn fx:id="colHistDate"   text="Date"      prefWidth="120"/>
+                                    <TableColumn fx:id="colHistStatut" text="Statut"    prefWidth="120"/>
                                 </columns>
                             </TableView>
                         </VBox>
@@ -136,8 +157,9 @@
                     <Tab text="🗺️ Carte Salles" closable="false">
                         <VBox spacing="12">
                             <HBox alignment="CENTER_LEFT" spacing="12">
-                                <Label text="Carte Interactive des Salles" styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="🔄 Rafraîchir" styleClass="btn-secondary" onAction="#handleRafraichirCarte"/>
+                                <Label text="Carte Interactive des Salles"
+                                       styleClass="section-title" HBox.hgrow="ALWAYS"/>
+                                <Button text="🔄 Rafraîchir"              styleClass="btn-secondary" onAction="#handleRafraichirCarte"/>
                                 <Button text="📊 Export Occupation Excel" styleClass="btn-secondary" onAction="#handleExportOccupationExcel"/>
                             </HBox>
                             <ScrollPane fitToWidth="true" fitToHeight="false" prefHeight="620">
@@ -150,8 +172,8 @@
                     <Tab text="📈 Rapports" closable="false">
                         <VBox spacing="16" style="-fx-padding:8;">
                             <HBox spacing="10" alignment="CENTER_LEFT">
-                                <Button text="📅 Rapport Hebdomadaire" styleClass="btn-primary" onAction="#handleRapportHebdo"/>
-                                <Button text="📆 Rapport Mensuel" styleClass="btn-secondary" onAction="#handleRapportMensuel"/>
+                                <Button text="📅 Rapport Hebdomadaire" styleClass="btn-primary"   onAction="#handleRapportHebdo"/>
+                                <Button text="📆 Rapport Mensuel"      styleClass="btn-secondary" onAction="#handleRapportMensuel"/>
                             </HBox>
                             <HBox spacing="16">
                                 <VBox styleClass="form-panel" HBox.hgrow="ALWAYS" spacing="4">
@@ -162,9 +184,9 @@
                                     <Label text="⚠️ Salles Critiques (occupation ≥ 70%)" styleClass="form-title"/>
                                     <TableView fx:id="sallesCritiquesTable" prefHeight="240" styleClass="data-table">
                                         <columns>
-                                            <TableColumn fx:id="colCritNum" text="Salle" prefWidth="80"/>
-                                            <TableColumn fx:id="colCritType" text="Type" prefWidth="60"/>
-                                            <TableColumn fx:id="colCritCap" text="Cap." prefWidth="55"/>
+                                            <TableColumn fx:id="colCritNum"  text="Salle"      prefWidth="80"/>
+                                            <TableColumn fx:id="colCritType" text="Type"       prefWidth="60"/>
+                                            <TableColumn fx:id="colCritCap"  text="Cap."       prefWidth="55"/>
                                             <TableColumn fx:id="colCritTaux" text="Occupation" prefWidth="120"/>
                                         </columns>
                                     </TableView>
@@ -172,8 +194,8 @@
                             </HBox>
                             <HBox spacing="16">
                                 <VBox styleClass="form-panel" HBox.hgrow="ALWAYS" spacing="4">
-                                    <Label text="Cours par Jour" styleClass="form-title"/>
-                                    <VBox fx:id="chartCoursContainer" minHeight="220"/>
+                                    <Label text="Cours par Jour"   styleClass="form-title"/>
+                                    <VBox fx:id="chartCoursContainer"  minHeight="220"/>
                                 </VBox>
                                 <VBox styleClass="form-panel" HBox.hgrow="ALWAYS" spacing="4">
                                     <Label text="Statut des Cours" styleClass="form-title"/>
@@ -188,6 +210,64 @@
                             </VBox>
                         </VBox>
                     </Tab>
+
+                    <!-- Tab 7: SIGNALEMENTS -->
+                    <Tab text="🔧 Signalements" closable="false">
+                        <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
+                            <VBox spacing="16" style="-fx-padding:16;">
+                                <HBox alignment="CENTER_LEFT" spacing="12">
+                                    <Label text="🔧 Signalements des Enseignants"
+                                           style="-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
+                                    <Label fx:id="signalBadge" text="" visible="false"
+                                           style="-fx-background-color:#fee2e2;-fx-text-fill:#991b1b;
+                                                  -fx-font-size:12px;-fx-font-weight:bold;
+                                                  -fx-padding:3 12;-fx-background-radius:20;"/>
+                                </HBox>
+                                <VBox spacing="10" styleClass="form-panel">
+                                    <HBox alignment="CENTER_LEFT" spacing="12">
+                                        <Label text="📋 Liste des signalements reçus"
+                                               styleClass="form-title" HBox.hgrow="ALWAYS"/>
+                                        <Button text="🔍 Voir détail" styleClass="btn-secondary" onAction="#handleVoirDetailSignal"/>
+                                        <Button text="🔄 Actualiser"  styleClass="btn-secondary" onAction="#handleRefresh"/>
+                                    </HBox>
+                                    <TableView fx:id="signalTable" prefHeight="300" styleClass="data-table">
+                                        <columns>
+                                            <TableColumn fx:id="colSignTitre"  text="Titre"      prefWidth="200"/>
+                                            <TableColumn fx:id="colSignEns"    text="Enseignant" prefWidth="140"/>
+                                            <TableColumn fx:id="colSignSalle"  text="Salle"      prefWidth="80"/>
+                                            <TableColumn fx:id="colSignCat"    text="Catégorie"  prefWidth="110"/>
+                                            <TableColumn fx:id="colSignPrio"   text="Priorité"   prefWidth="110"/>
+                                            <TableColumn fx:id="colSignStatut" text="Statut"     prefWidth="130"/>
+                                            <TableColumn fx:id="colSignDate"   text="Date"       prefWidth="100"/>
+                                        </columns>
+                                        <placeholder>
+                                            <Label text="Aucun signalement reçu."
+                                                   style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                        </placeholder>
+                                    </TableView>
+                                </VBox>
+                                <VBox spacing="12" styleClass="form-panel">
+                                    <Label text="✏ Traiter le signalement sélectionné" styleClass="form-title"/>
+                                    <VBox spacing="4">
+                                        <Label text="Nouveau statut" styleClass="form-label"/>
+                                        <ComboBox fx:id="signalStatutCombo" maxWidth="Infinity" promptText="Choisir un statut..."/>
+                                    </VBox>
+                                    <VBox spacing="4">
+                                        <Label text="Commentaire / Réponse à l'enseignant  (optionnel)" styleClass="form-label"/>
+                                        <TextArea fx:id="signalCommentArea"
+                                                  promptText="Ex: Problème pris en charge, technicien prévu le 20/03..."
+                                                  prefRowCount="3" wrapText="true"/>
+                                    </VBox>
+                                    <HBox alignment="CENTER_RIGHT" spacing="12">
+                                        <Button text="🔍 Voir détail complet" styleClass="btn-secondary" onAction="#handleVoirDetailSignal"/>
+                                        <Button text="✅  Valider le traitement" styleClass="btn-primary"
+                                                onAction="#handleTraiterSignalement" style="-fx-padding:10 24;"/>
+                                    </HBox>
+                                </VBox>
+                            </VBox>
+                        </ScrollPane>
+                    </Tab>
+
                 </TabPane>
             </VBox>
         </ScrollPane>
