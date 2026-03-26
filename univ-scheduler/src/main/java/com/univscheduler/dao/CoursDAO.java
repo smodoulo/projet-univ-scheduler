@@ -1,4 +1,5 @@
 package com.univscheduler.dao;
+
 import com.univscheduler.model.Cours;
 import java.sql.*;
 import java.time.LocalDate;
@@ -9,9 +10,9 @@ public class CoursDAO {
 
     private static final String SELECT_SQL =
             "SELECT c.*, m.nom as mat_nom, " +
-                    "CONCAT(u.prenom,' ',u.nom) as ens_nom, " +   // ← CONCAT au lieu de ||
+                    "CONCAT(u.prenom,' ',u.nom) as ens_nom, " +
                     "cp.nom as cls_nom, " +
-                    "CONCAT(cr.jour,' ',cr.heure_debut,'h') as cren_info, " + // ← CONCAT
+                    "CONCAT(cr.jour,' ',cr.heure_debut,'h') as cren_info, " +
                     "s.numero as salle_num " +
                     "FROM cours c " +
                     "LEFT JOIN matieres m ON c.matiere_id = m.id " +
@@ -104,7 +105,7 @@ public class CoursDAO {
             ps.setInt(1, salleId); ps.setInt(2, creneauId);
             ps.setString(3, date); ps.setInt(4, excludeId);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1) > 0; // ← rs.next() ajouté
+            if (rs.next()) return rs.getInt(1) > 0;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
     }
@@ -115,12 +116,18 @@ public class CoursDAO {
             ps.setInt(1, ensId); ps.setInt(2, creneauId);
             ps.setString(3, date); ps.setInt(4, excludeId);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1) > 0; // ← rs.next() ajouté
+            if (rs.next()) return rs.getInt(1) > 0;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
     }
 
+    // ✅ MODIFIÉ : statut "PLANIFIE" par défaut à la création
     public void save(Cours c) {
+        // Statut PLANIFIE par défaut si non défini
+        if (c.getStatut() == null || c.getStatut().isEmpty()) {
+            c.setStatut("PLANIFIE");
+        }
+
         if (c.getId() == 0) {
             try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO cours(statut,date,matiere_id,enseignant_id,classe_id,creneau_id,salle_id) " +
@@ -148,6 +155,16 @@ public class CoursDAO {
         }
     }
 
+    // ✅ NOUVEAU : mise à jour uniquement du statut (appelé par l'enseignant)
+    public void updateStatut(int coursId, String nouveauStatut) {
+        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
+                "UPDATE cours SET statut=? WHERE id=?")) {
+            ps.setString(1, nouveauStatut);
+            ps.setInt(2, coursId);
+            ps.executeUpdate();
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
     public void delete(int id) {
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
                 "DELETE FROM cours WHERE id=?")) {
@@ -159,7 +176,7 @@ public class CoursDAO {
     public int count() {
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM cours");
-            if (rs.next()) return rs.getInt(1); // ← rs.next() ajouté
+            if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
     }

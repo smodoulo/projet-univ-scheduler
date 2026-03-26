@@ -51,19 +51,139 @@ public class AlertePersonnalisee {
                 "Voulez-vous vous déconnecter\nde UNIV-SCHEDULER ?",true);
     }
 
+    // ── ✅ NOUVEAU : confirmer annulation d'un cours ──────────────
+    // Usage : boolean ok = AlertePersonnalisee.confirmerAnnulationCours(
+    //             "Probabilités et Statistiques — MATH-L1", "LUNDI", "10:00", "12:00");
+    public static boolean confirmerAnnulationCours(
+            String nomCours, String jour, String heureDebut, String heureFin) {
+
+        final boolean[] resultat = {false};
+
+        Stage fenetre = new Stage();
+        fenetre.initModality(Modality.APPLICATION_MODAL);
+        fenetre.initStyle(StageStyle.TRANSPARENT);
+        fenetre.setResizable(false);
+
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color:transparent;");
+        overlay.setPrefSize(520, 340);
+
+        VBox carte = new VBox(0);
+        carte.setMaxWidth(440);
+        DropShadow ombre = new DropShadow();
+        ombre.setRadius(36); ombre.setOffsetY(10); ombre.setColor(Color.color(0,0,0,0.35));
+        carte.setEffect(ombre);
+        carte.setStyle("-fx-background-color:#eff6ff;-fx-background-radius:14;");
+
+        // ── Bande titre ──────────────────────────────────────────
+        HBox bandeTitre = new HBox(10);
+        bandeTitre.setAlignment(Pos.CENTER_LEFT);
+        bandeTitre.setPadding(new Insets(14,20,14,20));
+        bandeTitre.setStyle("-fx-background-color:#1e293b;-fx-background-radius:14 14 0 0;");
+
+        Label lblLogo  = new Label("🎓"); lblLogo.setStyle("-fx-font-size:16px;");
+        Label lblSep   = new Label("|");  lblSep.setStyle("-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;");
+        Label lblIcone = new Label("❓"); lblIcone.setStyle("-fx-font-size:16px;");
+        Label lblTitre = new Label("Confirmer l'annulation");
+        lblTitre.setStyle("-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Label lblApp = new Label("UNIV-SCHEDULER");
+        lblApp.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.55);-fx-font-weight:bold;");
+        Button btnX = new Button("✕");
+        btnX.setStyle("-fx-background-color:rgba(255,255,255,0.15);-fx-text-fill:white;-fx-font-size:11px;"
+                +"-fx-background-radius:50;-fx-min-width:24;-fx-min-height:24;-fx-cursor:hand;-fx-padding:0;");
+        btnX.setOnMouseEntered(e->btnX.setStyle(btnX.getStyle().replace("0.15","0.35")));
+        btnX.setOnMouseExited (e->btnX.setStyle(btnX.getStyle().replace("0.35","0.15")));
+        btnX.setOnAction(e->{ resultat[0]=false; fenetre.close(); });
+        bandeTitre.getChildren().addAll(lblLogo,lblSep,lblIcone,lblTitre,esp,lblApp,btnX);
+
+        // ── Ligne décorative bleue ────────────────────────────────
+        Region ligne = new Region();
+        ligne.setPrefHeight(3);
+        ligne.setStyle("-fx-background-color:#3b82f6;");
+
+        // ── Corps ─────────────────────────────────────────────────
+        HBox corps = new HBox(14);
+        corps.setPadding(new Insets(22,24,14,24));
+        corps.setAlignment(Pos.TOP_LEFT);
+        corps.setStyle("-fx-background-color:#eff6ff;");
+
+        // Barre verticale bleue
+        Region barre = new Region();
+        barre.setPrefWidth(4); barre.setPrefHeight(90); barre.setMinHeight(Region.USE_PREF_SIZE);
+        barre.setStyle("-fx-background-color:#3b82f6;-fx-background-radius:4;");
+
+        VBox contenu = new VBox(12);
+
+        // Titre question
+        Label lblQuestion = new Label("Annuler ce cours ?");
+        lblQuestion.setStyle("-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:#1e3a5f;");
+
+        // Grille infos Cours / Jour
+        VBox grille = new VBox(0);
+        grille.setStyle("-fx-background-color:white;-fx-background-radius:8;"
+                +"-fx-border-color:#e2e8f0;-fx-border-radius:8;-fx-border-width:0.5;");
+
+        String[][] infos = {
+                {"Cours", nomCours},
+                {"Jour",  jour + "  " + heureDebut + " – " + heureFin}
+        };
+        for (int i = 0; i < infos.length; i++) {
+            HBox rangee = new HBox(0);
+            rangee.setPadding(new Insets(10,14,10,14));
+            rangee.setStyle("-fx-background-color:"+(i%2==0?"white":"#f8fafc")+";");
+            Label cle = new Label(infos[i][0]);
+            cle.setMinWidth(80);
+            cle.setStyle("-fx-font-size:12px;-fx-text-fill:#64748b;-fx-font-weight:bold;");
+            Label val = new Label(infos[i][1]);
+            val.setWrapText(true); val.setMaxWidth(280);
+            val.setStyle("-fx-font-size:12px;-fx-text-fill:#1e293b;-fx-font-weight:bold;");
+            rangee.getChildren().addAll(cle, val);
+            grille.getChildren().add(rangee);
+        }
+
+        // Note info
+        HBox note = new HBox(8);
+        note.setAlignment(Pos.TOP_LEFT);
+        note.setPadding(new Insets(10,14,10,14));
+        note.setStyle("-fx-background-color:#dbeafe;-fx-background-radius:8;");
+        Label iconeInfo = new Label("ℹ"); iconeInfo.setStyle("-fx-font-size:14px;");
+        Label txtInfo   = new Label("Le gestionnaire sera notifié automatiquement.");
+        txtInfo.setWrapText(true); txtInfo.setMaxWidth(290);
+        txtInfo.setStyle("-fx-font-size:12px;-fx-text-fill:#1e3a5f;-fx-line-spacing:3;");
+        note.getChildren().addAll(iconeInfo, txtInfo);
+
+        contenu.getChildren().addAll(lblQuestion, grille, note);
+        corps.getChildren().addAll(barre, contenu);
+
+        // ── Zone boutons ──────────────────────────────────────────
+        HBox zoneBoutons = new HBox(12);
+        zoneBoutons.setAlignment(Pos.CENTER_RIGHT);
+        zoneBoutons.setPadding(new Insets(14,24,20,24));
+        zoneBoutons.setStyle("-fx-background-color:#f8fafc;-fx-background-radius:0 0 14 14;");
+
+        Button btnAnnuler = creerBouton("Annuler","#e2e8f0","#1e293b","#cbd5e1");
+        btnAnnuler.setOnAction(e->{ resultat[0]=false; fenetre.close(); });
+
+        Button btnConfirmer = creerBouton("✔ Confirmer","#3b82f6","white","#2563eb");
+        btnConfirmer.setOnAction(e->{ resultat[0]=true; fenetre.close(); });
+
+        zoneBoutons.getChildren().addAll(btnAnnuler, btnConfirmer);
+
+        carte.getChildren().addAll(bandeTitre, ligne, corps, zoneBoutons);
+        overlay.getChildren().add(carte);
+
+        // Animation entrée
+        carte.setOpacity(0); carte.setTranslateY(-14);
+        FadeTransition ft=new FadeTransition(Duration.millis(220),carte); ft.setFromValue(0);ft.setToValue(1);ft.play();
+        TranslateTransition tt=new TranslateTransition(Duration.millis(220),carte); tt.setFromY(-14);tt.setToY(0);tt.play();
+
+        Scene scene=new Scene(overlay); scene.setFill(Color.TRANSPARENT);
+        fenetre.setScene(scene); fenetre.showAndWait();
+        return resultat[0];
+    }
+
     // ── ✅ NOUVEAU : dialogue détail signalement ──────────────────
-    /**
-     * Affiche le détail complet d'un signalement avec le style personnalisé.
-     *
-     * @param idSignal    numéro du signalement (ex: 2)
-     * @param titre       titre du signalement
-     * @param lignes      tableau de paires {icone+label, valeur} à afficher
-     *                    ex: {"📅 Date", "2026-03-19"}
-     * @param description texte de description (peut être null)
-     * @param reponseAdmin réponse de l'admin (peut être null)
-     * @param dateResolution date de résolution (peut être null)
-     * @param couleurStatut couleur hex selon le statut (ex: "#10b981" pour résolu)
-     */
     public static void afficherDetailSignalement(
             int idSignal, String titre,
             String[][] lignes,
@@ -76,7 +196,7 @@ public class AlertePersonnalisee {
         fenetre.setResizable(false);
 
         StackPane overlay = new StackPane();
-        overlay.setStyle("-fx-background-color:rgba(15,23,42,0.65);");
+        overlay.setStyle("-fx-background-color:transparent;");
         overlay.setPrefSize(600, 500);
 
         VBox carte = new VBox(0);
@@ -126,7 +246,6 @@ public class AlertePersonnalisee {
         lblTitreSignal.setMaxWidth(380);
         lblTitreSignal.setStyle("-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:white;");
 
-        // Badge statut coloré
         if (couleurStatut != null && lignes != null) {
             String statut = "";
             for (String[] l : lignes) if (l[0].contains("Statut")) { statut = l[1]; break; }
@@ -143,37 +262,31 @@ public class AlertePersonnalisee {
         VBox corps = new VBox(0);
         corps.setStyle("-fx-background-color:#f8fafc;");
 
-        // Grille des infos
         if (lignes != null) {
             VBox grille = new VBox(0);
             grille.setPadding(new Insets(16,24,8,24));
             for (int i = 0; i < lignes.length; i++) {
-                if (lignes[i][0].contains("Statut")) continue; // déjà affiché dans badge
+                if (lignes[i][0].contains("Statut")) continue;
                 HBox rangee = new HBox(0);
                 rangee.setPadding(new Insets(10,12,10,12));
                 rangee.setStyle("-fx-background-color:" + (i%2==0?"white":"#f1f5f9") + ";"
                         +"-fx-background-radius:6;");
-
                 Label lblCle = new Label(lignes[i][0]);
                 lblCle.setMinWidth(140);
                 lblCle.setStyle("-fx-font-size:12px;-fx-text-fill:#64748b;-fx-font-weight:bold;");
-
                 Label lblVal = new Label(lignes[i][1] != null ? lignes[i][1] : "—");
                 lblVal.setWrapText(true); lblVal.setMaxWidth(280);
                 lblVal.setStyle("-fx-font-size:12px;-fx-text-fill:#1e293b;-fx-font-weight:bold;");
-
                 rangee.getChildren().addAll(lblCle, lblVal);
                 grille.getChildren().add(rangee);
             }
             corps.getChildren().add(grille);
         }
 
-        // Séparateur
         Region sep = new Region(); sep.setPrefHeight(1);
         sep.setStyle("-fx-background-color:#e2e8f0;-fx-margin:0 24;");
         corps.getChildren().add(sep);
 
-        // Description
         if (description != null && !description.isEmpty()) {
             VBox blocDesc = new VBox(6);
             blocDesc.setPadding(new Insets(14,24,10,24));
@@ -187,7 +300,6 @@ public class AlertePersonnalisee {
             corps.getChildren().add(blocDesc);
         }
 
-        // Réponse admin
         if (reponseAdmin != null && !reponseAdmin.isEmpty()) {
             VBox blocReponse = new VBox(6);
             blocReponse.setPadding(new Insets(10,24,10,24));
@@ -201,7 +313,6 @@ public class AlertePersonnalisee {
             corps.getChildren().add(blocReponse);
         }
 
-        // Date résolution
         if (dateResolution != null && !dateResolution.isEmpty()) {
             Label lblResol = new Label("✅ Résolu le : " + dateResolution);
             lblResol.setPadding(new Insets(6,24,12,24));
@@ -213,7 +324,6 @@ public class AlertePersonnalisee {
         scroll.setFitToWidth(true); scroll.setMaxHeight(320);
         scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
 
-        // ── Bouton OK ─────────────────────────────────────────────
         HBox zoneBouton = new HBox();
         zoneBouton.setAlignment(Pos.CENTER_RIGHT);
         zoneBouton.setPadding(new Insets(12,24,18,24));
@@ -225,7 +335,6 @@ public class AlertePersonnalisee {
         carte.getChildren().addAll(bandeTitre, ligne, enTete, scroll, zoneBouton);
         overlay.getChildren().add(carte);
 
-        // Animation
         carte.setOpacity(0); carte.setTranslateY(-14);
         FadeTransition ft=new FadeTransition(Duration.millis(220),carte); ft.setFromValue(0);ft.setToValue(1);ft.play();
         TranslateTransition tt=new TranslateTransition(Duration.millis(220),carte); tt.setFromY(-14);tt.setToY(0);tt.play();
@@ -243,7 +352,7 @@ public class AlertePersonnalisee {
         fenetre.setResizable(false);
 
         StackPane overlay = new StackPane();
-        overlay.setStyle("-fx-background-color:rgba(15,23,42,0.60);");
+        overlay.setStyle("-fx-background-color:transparent;");
         overlay.setPrefSize(520,320);
 
         VBox carte = new VBox(0); carte.setMaxWidth(430);
