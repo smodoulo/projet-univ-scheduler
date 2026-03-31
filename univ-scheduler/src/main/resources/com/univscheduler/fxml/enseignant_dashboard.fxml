@@ -32,26 +32,44 @@
                         <HBox spacing="16">
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Mes cours assignés" styleClass="section-title"/>
-                                <TableView fx:id="coursTable" prefHeight="400" styleClass="data-table">
+
+                                <!-- ✅ CHIPS FILTRE PAR CLASSE -->
+                                <VBox spacing="6"
+                                      style="-fx-padding:10 12;-fx-background-color:#f8fafc;
+                                             -fx-background-radius:10;-fx-border-radius:10;
+                                             -fx-border-color:#e2e8f0;-fx-border-width:1;">
+                                    <Label text="🎓 Filtrer par classe"
+                                           style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#475569;"/>
+                                    <!-- Le HBox des chips est généré dynamiquement depuis le controller -->
+                                    <FlowPane fx:id="chipsContainer" hgap="8" vgap="6"
+                                              style="-fx-padding:4 0 2 0;"/>
+                                    <Label fx:id="filtreResultLabel" text=""
+                                           style="-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;"/>
+                                </VBox>
+
+                                <TableView fx:id="coursTable" prefHeight="360" styleClass="data-table">
                                     <columns>
                                         <TableColumn fx:id="colMat"        text="Matière"  prefWidth="150"/>
                                         <TableColumn fx:id="colCls"        text="Classe"   prefWidth="95"/>
-                                        <!-- ✅ Créneau → Jour uniquement -->
                                         <TableColumn fx:id="colCren"       text="Jour"     prefWidth="90"/>
-                                        <!-- ✅ AJOUT : Début et Fin -->
                                         <TableColumn fx:id="colHeureDebut" text="Début"    prefWidth="60"/>
                                         <TableColumn fx:id="colHeureFin"   text="Fin"      prefWidth="60"/>
                                         <TableColumn fx:id="colSalle"      text="Salle"    prefWidth="75"/>
                                         <TableColumn fx:id="colDate"       text="Date"     prefWidth="100"/>
                                         <TableColumn fx:id="colStatut"     text="Statut"   prefWidth="95"/>
                                     </columns>
+                                    <placeholder>
+                                        <Label text="Aucun cours pour cette classe."
+                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                    </placeholder>
                                 </TableView>
                                 <HBox spacing="8">
                                     <Button text="📄 Export PDF"   styleClass="btn-secondary" onAction="#handleExportPDF"/>
                                     <Button text="📊 Export Excel" styleClass="btn-secondary" onAction="#handleExportExcel"/>
                                 </HBox>
                             </VBox>
-                            <!-- ✅ Graphique avec label amélioré -->
+
+                            <!-- Graphique camembert -->
                             <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
                                 <Label text="📊 Mes Cours par Statut" styleClass="form-title"/>
                                 <VBox fx:id="chartEnsContainer" minHeight="220"/>

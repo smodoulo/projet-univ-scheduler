@@ -10,6 +10,22 @@
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="Gestionnaire" styleClass="nav-role-badge-green"/>
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
+
+            <!-- ✅ AJOUT : bouton cloche + badge rouge notifications -->
+            <StackPane>
+                <Button text="🔔" onAction="#handleVoirNotifications"
+                        style="-fx-background-color:#334155;-fx-text-fill:white;
+                               -fx-font-size:15px;-fx-padding:5 12;
+                               -fx-background-radius:8;-fx-cursor:hand;"/>
+                <Label fx:id="notifBadge" text="0" visible="false"
+                       StackPane.alignment="TOP_RIGHT"
+                       translateX="6" translateY="-6"
+                       style="-fx-background-color:#ef4444;-fx-text-fill:white;
+                              -fx-font-size:9px;-fx-font-weight:bold;
+                              -fx-background-radius:10;-fx-padding:1 5;
+                              -fx-min-width:18;-fx-alignment:CENTER;"/>
+            </StackPane>
+
             <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
         </HBox>
     </top>
@@ -34,7 +50,28 @@
                         <HBox spacing="16">
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Tous les Cours" styleClass="section-title"/>
-                                <TableView fx:id="coursTable" prefHeight="480" styleClass="data-table">
+
+                                <!-- ✅ AJOUT : barre de filtre par classe -->
+                                <HBox spacing="10" alignment="CENTER_LEFT"
+                                      style="-fx-background-color:white;-fx-padding:8 12;
+                                             -fx-background-radius:8;
+                                             -fx-border-color:#e2e8f0;-fx-border-radius:8;-fx-border-width:0.5;">
+                                    <Label text="🎓 Classe :"
+                                           style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#475569;"/>
+                                    <ComboBox fx:id="filtreClasseCombo" prefWidth="200"
+                                              promptText="— Toutes les classes —"
+                                              style="-fx-font-size:12px;"/>
+                                    <Button text="✕"
+                                            onAction="#handleReinitialiseFiltreClasse"
+                                            style="-fx-background-color:#f1f5f9;-fx-text-fill:#64748b;
+                                                   -fx-font-size:11px;-fx-font-weight:bold;
+                                                   -fx-padding:5 10;-fx-background-radius:6;-fx-cursor:hand;"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="filtreInfoLabel" text=""
+                                           style="-fx-font-size:11px;-fx-text-fill:#3b82f6;-fx-font-style:italic;"/>
+                                </HBox>
+
+                                <TableView fx:id="coursTable" prefHeight="460" styleClass="data-table">
                                     <columns>
                                         <TableColumn fx:id="colMat"    text="Matière"    prefWidth="140"/>
                                         <TableColumn fx:id="colEns"    text="Enseignant" prefWidth="130"/>
@@ -44,6 +81,10 @@
                                         <TableColumn fx:id="colDate"   text="Date"       prefWidth="90"/>
                                         <TableColumn fx:id="colStatut" text="Statut"     prefWidth="90"/>
                                     </columns>
+                                    <placeholder>
+                                        <Label text="Aucun cours pour cette classe."
+                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                    </placeholder>
                                 </TableView>
                                 <HBox spacing="8">
                                     <Button text="📄 Export PDF"   styleClass="btn-secondary" onAction="#handleExportPDF"/>
@@ -65,7 +106,6 @@
                                 <DatePicker fx:id="datePicker"    maxWidth="Infinity"/>
                                 <Label text="Salle" styleClass="form-label"/>
                                 <ComboBox fx:id="salleCombo" maxWidth="Infinity"/>
-                                <!-- ✅ AJOUT : suggestion automatique de salle -->
                                 <Label fx:id="salleAutoLabel" text="" wrapText="true" visible="false"
                                        maxWidth="Infinity"
                                        style="-fx-font-size:11px;-fx-font-weight:bold;
@@ -110,7 +150,7 @@
                         </VBox>
                     </Tab>
 
-                    <!-- Tab 3: Réservations (EN ATTENTE) -->
+                    <!-- Tab 3: Réservations -->
                     <Tab text="📌 Réservations" closable="false">
                         <VBox spacing="10">
                             <Label text="Demandes en Attente de Validation" styleClass="section-title"/>
@@ -168,7 +208,7 @@
                         </VBox>
                     </Tab>
 
-                    <!-- Tab 6: Statistiques & Rapports -->
+                    <!-- Tab 6: Rapports -->
                     <Tab text="📈 Rapports" closable="false">
                         <VBox spacing="16" style="-fx-padding:8;">
                             <HBox spacing="10" alignment="CENTER_LEFT">
@@ -206,12 +246,12 @@
                                 <Label text="📋 Rapport Textuel" styleClass="form-title"/>
                                 <TextArea fx:id="rapportTextArea" prefHeight="200" editable="false"
                                           style="-fx-font-family:monospace;-fx-font-size:11px;"
-                                          promptText="Cliquez sur 'Rapport Hebdomadaire' ou 'Rapport Mensuel' pour générer un rapport..."/>
+                                          promptText="Cliquez sur 'Rapport Hebdomadaire' ou 'Rapport Mensuel'..."/>
                             </VBox>
                         </VBox>
                     </Tab>
 
-                    <!-- Tab 7: SIGNALEMENTS -->
+                    <!-- Tab 7: Signalements -->
                     <Tab text="🔧 Signalements" closable="false">
                         <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
                             <VBox spacing="16" style="-fx-padding:16;">
@@ -253,14 +293,14 @@
                                         <ComboBox fx:id="signalStatutCombo" maxWidth="Infinity" promptText="Choisir un statut..."/>
                                     </VBox>
                                     <VBox spacing="4">
-                                        <Label text="Commentaire / Réponse à l'enseignant  (optionnel)" styleClass="form-label"/>
+                                        <Label text="Commentaire / Réponse à l'enseignant (optionnel)" styleClass="form-label"/>
                                         <TextArea fx:id="signalCommentArea"
                                                   promptText="Ex: Problème pris en charge, technicien prévu le 20/03..."
                                                   prefRowCount="3" wrapText="true"/>
                                     </VBox>
                                     <HBox alignment="CENTER_RIGHT" spacing="12">
                                         <Button text="🔍 Voir détail complet" styleClass="btn-secondary" onAction="#handleVoirDetailSignal"/>
-                                        <Button text="✅  Valider le traitement" styleClass="btn-primary"
+                                        <Button text="✅ Valider le traitement" styleClass="btn-primary"
                                                 onAction="#handleTraiterSignalement" style="-fx-padding:10 24;"/>
                                     </HBox>
                                 </VBox>

@@ -25,6 +25,13 @@ public class GestionnaireDashboardController extends BaseController {
     @FXML private Label coursFormTitle, conflitLabel;
     @FXML private Label salleAutoLabel;
 
+    // ── badge notifications navbar ────────────────────────────────
+    @FXML private Label notifBadge;
+
+    // ── Filtre classe tableau cours ───────────────────────────────
+    @FXML private ComboBox<String> filtreClasseCombo;
+    @FXML private Label            filtreInfoLabel;
+
     @FXML private TableView<Cours> coursTable;
     @FXML private TableColumn<Cours, String> colMat, colEns, colCls, colCren, colSalle, colDate, colStatut;
     @FXML private ComboBox<Matiere>      matiereCombo;
@@ -73,6 +80,7 @@ public class GestionnaireDashboardController extends BaseController {
     private final ExportService   exportService  = new ExportService();
 
     private final ObservableList<Cours>       coursList      = FXCollections.observableArrayList();
+    private final ObservableList<Cours>       coursListFiltree = FXCollections.observableArrayList();
     private final ObservableList<Reservation> reservList     = FXCollections.observableArrayList();
     private final ObservableList<Reservation> historiqueList = FXCollections.observableArrayList();
     private final ObservableList<Salle>       critList       = FXCollections.observableArrayList();
@@ -90,7 +98,7 @@ public class GestionnaireDashboardController extends BaseController {
     protected void onUserLoaded() {
         welcomeLabel.setText("Bonjour, " + currentUser.getNomComplet());
         setupCoursTable(); setupReservTable(); setupHistoriqueTable();
-        setupCritiquesTable(); setupSignalTable();
+        setupCritiquesTable(); setupSignalTable(); setupFiltreClasse();
 
         matiereCombo.setItems(FXCollections.observableArrayList(matiereDAO.findAll()));
         enseignantCombo.setItems(FXCollections.observableArrayList(utilisateurDAO.findAllEnseignants()));
@@ -150,9 +158,50 @@ public class GestionnaireDashboardController extends BaseController {
         colSalle.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getSalleNumero()));
         colDate.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getDate()!=null?d.getValue().getDate().toString():""));
         colStatut.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getStatut()));
-        coursTable.setItems(coursList);
+        coursTable.setItems(coursListFiltree);
         coursTable.getSelectionModel().selectedItemProperty().addListener((obs,old,c)->{if(c!=null){selectedCours=c;fillForm(c);}});
     }
+    // ── Filtre par classe ─────────────────────────────────────────
+    private void setupFiltreClasse() {
+        if (filtreClasseCombo == null) return;
+        filtreClasseCombo.setOnAction(e -> appliquerFiltreClasse());
+    }
+
+    private void refreshFiltreClasse() {
+        if (filtreClasseCombo == null) { coursListFiltree.setAll(coursList); return; }
+        String sel = filtreClasseCombo.getValue();
+        List<String> classes = new ArrayList<>();
+        classes.add("— Toutes les classes —");
+        coursList.stream().map(Cours::getClasseNom)
+                .filter(c -> c != null && !c.isEmpty())
+                .distinct().sorted().forEach(classes::add);
+        filtreClasseCombo.setItems(FXCollections.observableArrayList(classes));
+        String restore = (sel != null && classes.contains(sel)) ? sel : "— Toutes les classes —";
+        filtreClasseCombo.setValue(restore);
+        appliquerFiltreClasse();
+    }
+
+    private void appliquerFiltreClasse() {
+        if (filtreClasseCombo == null) { coursListFiltree.setAll(coursList); return; }
+        String sel = filtreClasseCombo.getValue();
+        if (sel == null || sel.startsWith("—")) {
+            coursListFiltree.setAll(coursList);
+            totalCoursLabel.setText("Total : " + coursList.size() + " cours");
+            if (filtreInfoLabel != null) filtreInfoLabel.setText("");
+        } else {
+            coursListFiltree.setAll(
+                    coursList.stream().filter(c -> sel.equals(c.getClasseNom()))
+                            .collect(java.util.stream.Collectors.toList())
+            );
+            totalCoursLabel.setText(coursListFiltree.size() + " cours  (classe : " + sel + ")");
+            if (filtreInfoLabel != null) filtreInfoLabel.setText(coursListFiltree.size() + " résultat(s)");
+        }
+    }
+
+    @FXML private void handleReinitialiseFiltreClasse() {
+        if (filtreClasseCombo != null) filtreClasseCombo.setValue("— Toutes les classes —");
+    }
+
     private void setupReservTable() {
         if(reservTable==null)return;
         colResMotif.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getMotif()));
@@ -207,6 +256,7 @@ public class GestionnaireDashboardController extends BaseController {
     // ── Data ──────────────────────────────────────────────────────
     private void loadData() {
         coursList.setAll(coursDAO.findAll());
+        refreshFiltreClasse();
         List<Reservation> allReserv=reservDAO.findAll();
         reservList.setAll(allReserv.stream().filter(r->"EN_ATTENTE".equals(r.getStatut())).collect(java.util.stream.Collectors.toList()));
         historiqueList.setAll(allReserv); critList.setAll(rapportService.getSallesCritiques());
@@ -216,6 +266,28 @@ public class GestionnaireDashboardController extends BaseController {
         signalList.setAll(signalDAO.findAll());
         long nbEnAttente=signalDAO.countEnAttente();
         if(signalBadge!=null){signalBadge.setText(nbEnAttente>0?"🔴 "+nbEnAttente+" en attente":"");signalBadge.setStyle("-fx-text-fill:#dc2626;-fx-font-weight:bold;");signalBadge.setVisible(nbEnAttente>0);}
+        refreshNotifBadge();
+    }
+
+    // ── Badge notifications ───────────────────────────────────────
+    private void refreshNotifBadge() {
+        if (notifBadge == null) return;
+        int nb = notifDAO.countUnread(currentUser.getId());
+        if (nb > 0) {
+            notifBadge.setText(String.valueOf(nb));
+            notifBadge.setVisible(true);
+        } else {
+            notifBadge.setVisible(false);
+        }
+    }
+
+    // ── ✅ Notifications : délégation à AlertePersonnalisee ───────
+    @FXML
+    private void handleVoirNotifications() {
+        List<Notification> notifs = notifDAO.findByUtilisateur(currentUser.getId());
+        notifDAO.markAllRead(currentUser.getId());
+        refreshNotifBadge();
+        AlertePersonnalisee.afficherNotifications(notifs);
     }
 
     // ── Charts ────────────────────────────────────────────────────
@@ -386,12 +458,9 @@ public class GestionnaireDashboardController extends BaseController {
         selectedSignal=null;if(signalCommentArea!=null)signalCommentArea.clear();if(signalStatutCombo!=null)signalStatutCombo.setValue(null);signalTable.getSelectionModel().clearSelection();
     }
 
-    // ✅ MODIFIÉ : dialogue signalement personnalisé
     @FXML private void handleVoirDetailSignal() {
         if (selectedSignal == null) { showError("Erreur","Sélectionnez un signalement."); return; }
         Signalement s = selectedSignal;
-
-        // Couleur badge selon statut
         String couleurStatut;
         switch (s.getStatut()) {
             case "RESOLU":   couleurStatut = "#10b981"; break;
@@ -399,7 +468,6 @@ public class GestionnaireDashboardController extends BaseController {
             case "FERME":    couleurStatut = "#6366f1"; break;
             default:         couleurStatut = "#94a3b8"; break;
         }
-
         String[][] lignes = {
                 {"📅 Date signalé",  s.getDateSignalement() != null ? s.getDateSignalement().toLocalDate().toString() : "—"},
                 {"👤 Enseignant",    s.getEnseignantNom()   != null ? s.getEnseignantNom()   : "—"},
@@ -408,16 +476,11 @@ public class GestionnaireDashboardController extends BaseController {
                 {"⚡ Priorité",      s.getPrioriteIcon() + " " + s.getPriorite()},
                 {"📌 Statut",        formatStatutSignal(s.getStatut())},
         };
-
         AlertePersonnalisee.afficherDetailSignalement(
-                s.getId(),
-                s.getCategorieIcon() + " " + s.getTitre(),
-                lignes,
-                s.getDescription(),
-                s.getCommentaireAdmin(),
-                s.getDateResolution() != null ? s.getDateResolution().toLocalDate().toString() : null,
-                couleurStatut
-        );
+                s.getId(), s.getCategorieIcon()+" "+s.getTitre(), lignes,
+                s.getDescription(), s.getCommentaireAdmin(),
+                s.getDateResolution()!=null?s.getDateResolution().toLocalDate().toString():null,
+                couleurStatut);
     }
 
     private String formatStatutSignal(String statut) {
