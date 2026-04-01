@@ -4,6 +4,7 @@ import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
 import com.univscheduler.service.*;
 import com.univscheduler.model.AlertePersonnalisee;
+import com.univscheduler.service.EmailService;
 import javafx.beans.property.*;
 import javafx.collections.*;
 import javafx.fxml.FXML;
@@ -446,16 +447,58 @@ public class GestionnaireDashboardController extends BaseController {
     }
 
     // ── Signalements ──────────────────────────────────────────────
+    // ── Signalements ──────────────────────────────────────────────
     @FXML private void handleTraiterSignalement() {
-        if(selectedSignal==null){showError("Erreur","Sélectionnez un signalement.");return;}
-        String statut=signalStatutCombo!=null?signalStatutCombo.getValue():null;
-        if(statut==null){showError("Erreur","Choisissez un nouveau statut.");return;}
-        String commentaire=signalCommentArea!=null?signalCommentArea.getText().trim():"";
-        signalDAO.updateStatut(selectedSignal.getId(),statut,commentaire);
-        Notification n=new Notification();n.setUtilisateurId(selectedSignal.getEnseignantId());n.setType("RESOLU".equals(statut)?"INFO":"ALERTE");
-        n.setMessage("📋 Votre signalement #"+selectedSignal.getId()+" ("+selectedSignal.getTitre()+") a été mis à jour : "+formatStatutSignal(statut)+(commentaire.isEmpty()?"":" \n💬 "+commentaire));
-        notifDAO.save(n);loadData();showInfo("Mis à jour","Signalement #"+selectedSignal.getId()+" → "+formatStatutSignal(statut));
-        selectedSignal=null;if(signalCommentArea!=null)signalCommentArea.clear();if(signalStatutCombo!=null)signalStatutCombo.setValue(null);signalTable.getSelectionModel().clearSelection();
+        if (selectedSignal == null) { showError("Erreur", "Sélectionnez un signalement."); return; }
+
+        String statut = signalStatutCombo != null ? signalStatutCombo.getValue() : null;
+        if (statut == null) { showError("Erreur", "Choisissez un nouveau statut."); return; }
+
+        String commentaire = signalCommentArea != null ? signalCommentArea.getText().trim() : "";
+
+        // ── Mise à jour en base ───────────────────────────────────
+        signalDAO.updateStatut(selectedSignal.getId(), statut, commentaire);
+
+        // ── Notification in-app ───────────────────────────────────
+        Notification n = new Notification();
+        n.setUtilisateurId(selectedSignal.getEnseignantId());
+        n.setType("RESOLU".equals(statut) ? "INFO" : "ALERTE");
+        n.setMessage("📋 Votre signalement #" + selectedSignal.getId()
+                + " (" + selectedSignal.getTitre() + ") a été mis à jour : "
+                + formatStatutSignal(statut)
+                + (commentaire.isEmpty() ? "" : " \n💬 " + commentaire));
+        notifDAO.save(n);
+
+        // ── ✅ Email à l'enseignant ────────────────────────────────
+        utilisateurDAO.findAll().stream()
+                .filter(u -> u.getId() == selectedSignal.getEnseignantId())
+                .findFirst()
+                .ifPresent(enseignant -> {
+                    String sujet = "📋 Signalement #" + selectedSignal.getId()
+                            + " mis à jour — " + formatStatutSignal(statut);
+
+                    String corps = "Bonjour " + enseignant.getNomComplet() + ",\n\n"
+                            + "Votre signalement a été traité par l'administration :\n\n"
+                            + "  📌 Titre      : " + selectedSignal.getTitre() + "\n"
+                            + "  🏫 Salle      : " + (selectedSignal.getSalleNumero() != null
+                            ? selectedSignal.getSalleNumero() : "—") + "\n"
+                            + "  🔖 Catégorie  : " + selectedSignal.getCategorie() + "\n"
+                            + "  📌 Nouveau statut : " + formatStatutSignal(statut) + "\n"
+                            + (commentaire.isEmpty() ? "" :
+                            "  💬 Commentaire : " + commentaire + "\n")
+                            + "\nCordialement,\nUNIV-SCHEDULER";
+
+                    EmailService.sendNotification(enseignant, sujet, corps);
+                });
+
+        // ── Nettoyage ─────────────────────────────────────────────
+        loadData();
+        showInfo("Mis à jour", "Signalement #" + selectedSignal.getId()
+                + " → " + formatStatutSignal(statut));
+        selectedSignal = null;
+        if (signalCommentArea != null) signalCommentArea.clear();
+        if (signalStatutCombo != null) signalStatutCombo.setValue(null);
+        signalTable.getSelectionModel().clearSelection();
     }
 
     @FXML private void handleVoirDetailSignal() {

@@ -4,17 +4,19 @@
 <?import javafx.scene.shape.*?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.LoginController"
-            prefWidth="1100" prefHeight="680">
+            prefWidth="1100" prefHeight="680"
+            styleClass="root-bg">
 
     <HBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
-          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
+          alignment="CENTER">
+        <!-- CARTE CENTRALE -->
+        <VBox styleClass="login-card"
+              alignment="CENTER" spacing="14"
+              maxWidth="480"
+              VBox.vgrow="ALWAYS">
 
-        <!-- PANNEAU GAUCHE -->
-        <VBox styleClass="login-left-panel"
-              alignment="CENTER" spacing="30"
-              HBox.hgrow="ALWAYS" prefWidth="440">
-
-            <!-- Barre top : drag + boutons fenêtre discrets -->
+            <!-- Barre top drag -->
             <HBox styleClass="win-bar" alignment="CENTER_RIGHT"
                   onMousePressed="#handleBarPressed"
                   onMouseDragged="#handleBarDragged">
@@ -43,11 +45,12 @@
                 <Region styleClass="brand-line"/>
             </HBox>
 
+
             <!-- Slogan -->
             <Label text="Réservez · Planifiez · Optimisez" styleClass="brand-slogan"/>
 
             <!-- Boutons rôles -->
-            <VBox alignment="CENTER" spacing="12" style="-fx-padding: 8 0 0 0;">
+            <VBox alignment="CENTER" spacing="12" style="-fx-padding: 8 0 20 0;">
                 <HBox spacing="14" alignment="CENTER">
                     <Button text="👑  Admin"        styleClass="btn-quick" onAction="#handleQuickAdmin"/>
                     <Button text="📋  Gestionnaire" styleClass="btn-quick" onAction="#handleQuickGestionnaire"/>
@@ -59,6 +62,7 @@
             </VBox>
 
         </VBox>
+
 
         <!-- PANNEAU DROIT — caché par défaut -->
         <VBox fx:id="rightPanel"

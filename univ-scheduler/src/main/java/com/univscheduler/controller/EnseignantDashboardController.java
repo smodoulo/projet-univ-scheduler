@@ -6,6 +6,7 @@ import com.univscheduler.model.Servicerappel;
 import com.univscheduler.model.AlertePersonnalisee;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import com.univscheduler.service.EmailService;
 import javafx.collections.*;
 import javafx.fxml.FXML;
 import javafx.scene.chart.*;
@@ -94,6 +95,11 @@ public class EnseignantDashboardController extends BaseController {
             "08:00","09:00","10:00","11:00","12:00","13:00",
             "14:00","15:00","16:00","17:00","18:00","19:00","20:00");
 
+    // ── ✅ Helper : Gmail uniquement ──────────────────────────────
+    private static boolean isGmail(Utilisateur u) {
+        return u.getEmail() != null && u.getEmail().endsWith("@gmail.com");
+    }
+
     // ═══════════════════════════ INIT ════════════════════════════
     @Override
     protected void onUserLoaded() {
@@ -175,44 +181,38 @@ public class EnseignantDashboardController extends BaseController {
                     case "TERMINE":  affichage = "🏁 Terminé";   couleurFond = "#f3f4f6"; couleurTexte = "#374151"; break;
                     default:         affichage = statut;          couleurFond = "#f1f5f9"; couleurTexte = "#475569";
                 }
-                Label badge = new Label(affichage + "  ▾");
+
+                boolean statutFinal = "REALISE".equals(statut) || "ANNULE".equals(statut);
+                Label badge = new Label(affichage + (statutFinal ? "" : "  ▾"));
                 badge.setStyle(
                         "-fx-background-color:" + couleurFond + ";"
                                 + "-fx-text-fill:" + couleurTexte + ";"
                                 + "-fx-font-size:11px;-fx-font-weight:bold;"
                                 + "-fx-padding:3 8;-fx-background-radius:12;"
-                                + "-fx-cursor:hand;"
+                                + (statutFinal ? "" : "-fx-cursor:hand;")
                 );
 
-                ContextMenu menu = new ContextMenu();
+                if (!statutFinal) {
+                    ContextMenu menu = new ContextMenu();
+                    Label lblTitre = new Label("  Changer le statut :");
+                    lblTitre.setStyle("-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;");
+                    CustomMenuItem headerItem = new CustomMenuItem(lblTitre, false);
+                    headerItem.setHideOnClick(false);
 
-                Label lblTitre = new Label("  Changer le statut :");
-                lblTitre.setStyle("-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;");
-                CustomMenuItem headerItem = new CustomMenuItem(lblTitre, false);
-                headerItem.setHideOnClick(false);
+                    MenuItem itemRealise  = new MenuItem("✅  Marquer comme Réalisé");
+                    MenuItem itemAnnule   = new MenuItem("❌  Marquer comme Annulé");
+                    MenuItem itemPlanifie = new MenuItem("📅  Remettre en Planifié");
 
-                MenuItem itemRealise  = new MenuItem("✅  Marquer comme Réalisé");
-                MenuItem itemAnnule   = new MenuItem("❌  Marquer comme Annulé");
-                MenuItem itemPlanifie = new MenuItem("📅  Remettre en Planifié");
+                    itemRealise.setOnAction(e  -> changerStatutCours(getTableView().getItems().get(getIndex()), "REALISE"));
+                    itemAnnule.setOnAction(e   -> changerStatutCours(getTableView().getItems().get(getIndex()), "ANNULE"));
+                    itemPlanifie.setOnAction(e -> changerStatutCours(getTableView().getItems().get(getIndex()), "PLANIFIE"));
 
-                itemRealise.setOnAction(e  -> changerStatutCours(
-                        getTableView().getItems().get(getIndex()), "REALISE"));
-                itemAnnule.setOnAction(e   -> changerStatutCours(
-                        getTableView().getItems().get(getIndex()), "ANNULE"));
-                itemPlanifie.setOnAction(e -> changerStatutCours(
-                        getTableView().getItems().get(getIndex()), "PLANIFIE"));
+                    if ("PLANIFIE".equals(statut)) itemPlanifie.setDisable(true);
 
-                if ("REALISE".equals(statut))  itemRealise.setDisable(true);
-                if ("ANNULE".equals(statut))   itemAnnule.setDisable(true);
-                if ("PLANIFIE".equals(statut)) itemPlanifie.setDisable(true);
+                    menu.getItems().addAll(headerItem, new SeparatorMenuItem(), itemRealise, itemAnnule, new SeparatorMenuItem(), itemPlanifie);
+                    badge.setOnMouseClicked(e -> menu.show(badge, e.getScreenX(), e.getScreenY()));
+                }
 
-                menu.getItems().addAll(
-                        headerItem, new SeparatorMenuItem(),
-                        itemRealise, itemAnnule,
-                        new SeparatorMenuItem(), itemPlanifie
-                );
-
-                badge.setOnMouseClicked(e -> menu.show(badge, e.getScreenX(), e.getScreenY()));
                 setGraphic(badge);
                 setText(null);
             }
@@ -236,45 +236,51 @@ public class EnseignantDashboardController extends BaseController {
         coursTable.setItems(coursListFiltered);
     }
 
-    /**
-     * ✅ Change le statut d'un cours :
-     *   1. Sauvegarde en base (coursDAO.updateStatut)
-     *   2. Notifie tous les GESTIONNAIRE / ADMIN
-     *   3. Rafraîchit l'affichage + le graphique
-     */
+    // ✅ Changement statut — une seule fois + Gmail uniquement + responsable classe
     private void changerStatutCours(Cours cours, String nouveauStatut) {
         if (cours == null) return;
         String ancienStatut = cours.getStatut() != null ? cours.getStatut() : "PLANIFIE";
+
+        // ✅ Statut final — ne peut plus être modifié
+        if ("REALISE".equals(ancienStatut) || "ANNULE".equals(ancienStatut)) {
+            showError("Action impossible",
+                    "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
+            return;
+        }
+
         if (nouveauStatut.equals(ancienStatut)) return;
 
-        // ✅ Confirmation avec AlertePersonnalisee pour ANNULE
+        String motifAnnulation = null;
+
         if ("ANNULE".equals(nouveauStatut)) {
-            boolean ok = AlertePersonnalisee.confirmerAnnulationCours(
+            motifAnnulation = AlertePersonnalisee.demanderMotifAnnulation(
                     cours.getMatiereNom() + " — " + cours.getClasseNom(),
                     extraireJour(cours.getCreneauInfo()),
                     extraireHeureDebut(cours.getCreneauInfo()),
                     extraireHeureFin(cours.getCreneauInfo())
             );
-            if (!ok) return;
+            if (motifAnnulation == null) return;
         }
 
-        // 1. Mise à jour en base
         cours.setStatut(nouveauStatut);
         coursDAO.updateStatut(cours.getId(), nouveauStatut);
 
-        // 2. Notification aux gestionnaires / admins
-        String icone = "REALISE".equals(nouveauStatut) ? "✅"
-                : "ANNULE".equals(nouveauStatut)  ? "❌" : "📅";
+        String icone = "REALISE".equals(nouveauStatut) ? "✅" : "❌";
+        final String motifFinal  = motifAnnulation;
+        final String classeNom   = cours.getClasseNom();
+        final String matiereNom  = cours.getMatiereNom();
+        final String salleNumero = cours.getSalleNumero();
 
         String message = icone + " Statut modifié par " + currentUser.getNomComplet()
-                + " | Cours : " + cours.getMatiereNom() + " (" + cours.getClasseNom() + ")"
+                + " | Cours : " + matiereNom + " (" + classeNom + ")"
                 + " | " + extraireJour(cours.getCreneauInfo())
                 + " " + extraireHeureDebut(cours.getCreneauInfo())
                 + "–" + extraireHeureFin(cours.getCreneauInfo())
-                + " | Salle : " + (cours.getSalleNumero() != null ? cours.getSalleNumero() : "—")
+                + " | Salle : " + (salleNumero != null ? salleNumero : "—")
                 + " | " + ancienStatut + " → " + nouveauStatut
-                + " | Veuillez mettre à jour votre tableau de bord.";
+                + (motifFinal != null ? " | Motif : " + motifFinal : "");
 
+        // ✅ Notification + email gestionnaires/admins Gmail uniquement
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
@@ -284,15 +290,49 @@ public class EnseignantDashboardController extends BaseController {
                     n.setMessage(message);
                     n.setDateEnvoi(LocalDateTime.now());
                     notifDAO.save(n);
+
+                    if ("ANNULE".equals(nouveauStatut) && isGmail(u)) {
+                        EmailService.sendNotification(u,
+                                "❌ Cours annulé — " + matiereNom,
+                                "Bonjour " + u.getNomComplet() + ",\n\n"
+                                        + currentUser.getNomComplet() + " a annulé un cours :\n"
+                                        + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
+                                        + "  • Jour   : " + extraireJour(cours.getCreneauInfo()) + "\n"
+                                        + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
+                                        + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
+                                        + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
+                                        + "  • Motif  : " + motifFinal + "\n\n"
+                                        + "Cordialement,\nUNIV-SCHEDULER"
+                        );
+                    }
                 });
 
-        // 3. Rafraîchir
+        // ✅ Email au responsable de classe — UN SEUL étudiant Gmail
+        if ("ANNULE".equals(nouveauStatut)) {
+            new UtilisateurDAO().findAll().stream()
+                    .filter(u -> "ETUDIANT".equals(u.getRole()))
+                    .filter(u -> isGmail(u))
+                    .findFirst()
+                    .ifPresent(responsable -> EmailService.sendNotification(responsable,
+                            "❌ Cours annulé — " + matiereNom + " (" + classeNom + ")",
+                            "Bonjour " + responsable.getNomComplet() + ",\n\n"
+                                    + "Le cours suivant a été annulé. Merci d'informer vos camarades.\n\n"
+                                    + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
+                                    + "  • Jour   : " + extraireJour(cours.getCreneauInfo()) + "\n"
+                                    + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
+                                    + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
+                                    + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
+                                    + "  • Motif  : " + motifFinal + "\n\n"
+                                    + "Cordialement,\nUNIV-SCHEDULER"
+                    ));
+        }
+
         loadData();
         buildChart();
         showInfo("Statut mis à jour",
-                icone + "  Cours « " + cours.getMatiereNom() + " »\n"
+                icone + "  Cours « " + matiereNom + " »\n"
                         + "Nouveau statut : " + nouveauStatut + "\n\n"
-                        + "✉ Le gestionnaire a été notifié.");
+                        + "✉ Le gestionnaire et le responsable de classe ont été notifiés.");
     }
 
     // ═══════════════════════════ DONNÉES ══════════════════════════
@@ -515,6 +555,25 @@ public class EnseignantDashboardController extends BaseController {
         r.setDateFin(d.atTime(fin, 0));
         r.setStatut("EN_ATTENTE"); r.setUtilisateurId(currentUser.getId());
         reservDAO.save(r);
+        r.setSalleNumero(s.getNumero());
+
+        // ✅ Email gestionnaires/admins Gmail uniquement
+        final String hDebFinal = hDeb;
+        final int finFinal = fin;
+        new UtilisateurDAO().findAll().stream()
+                .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
+                .filter(u -> isGmail(u))
+                .forEach(u -> EmailService.sendNotification(u,
+                        "📋 Nouvelle demande de réservation — " + s.getNumero(),
+                        "Bonjour " + u.getNomComplet() + ",\n\n"
+                                + currentUser.getNomComplet() + " a soumis une réservation :\n"
+                                + "  • Salle  : " + s.getNumero() + "\n"
+                                + "  • Date   : " + d + "\n"
+                                + "  • Heure  : " + hDebFinal + " → " + finFinal + ":00\n"
+                                + "  • Motif  : " + motif + "\n\n"
+                                + "Cordialement,\nUNIV-SCHEDULER"
+                ));
+
         if (motifField          != null) motifField.clear();
         if (salleReservCombo    != null) salleReservCombo.setValue(null);
         if (heureFinReservCombo != null) heureFinReservCombo.setValue("10:00");
@@ -592,6 +651,7 @@ public class EnseignantDashboardController extends BaseController {
         sig.setDateSignalement(LocalDateTime.now());
         if (salle != null) { sig.setSalleId(salle.getId()); sig.setSalleNumero(salle.getNumero()); }
         sigDAO.save(sig);
+
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
@@ -603,6 +663,20 @@ public class EnseignantDashboardController extends BaseController {
                             + " | Par : " + currentUser.getNomComplet());
                     notifDAO.save(n);
                 });
+
+        // ✅ Email confirmation enseignant Gmail uniquement
+        if (isGmail(currentUser)) {
+            EmailService.sendNotification(currentUser,
+                    "✅ Signalement #" + sig.getId() + " enregistré",
+                    "Bonjour " + currentUser.getNomComplet() + ",\n\n"
+                            + "Votre signalement a bien été transmis à l'administration :\n"
+                            + "  • Titre    : " + sig.getTitre() + "\n"
+                            + "  • Priorité : " + sig.getPriorite() + "\n"
+                            + "  • Salle    : " + (sig.getSalleNumero() != null ? sig.getSalleNumero() : "—") + "\n\n"
+                            + "Cordialement,\nUNIV-SCHEDULER"
+            );
+        }
+
         showFeedback("✅ Signalement #" + sig.getId() + " transmis à l'administration.", true);
         clearSignalementForm(); loadData();
     }

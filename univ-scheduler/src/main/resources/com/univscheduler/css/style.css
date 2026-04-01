@@ -220,6 +220,21 @@
     -fx-background-color: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.2), 10, 0, 0, 0);
 }
+.login-card {
+    -fx-background-color: #1a2540;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: #2a3a5c;
+    -fx-border-width: 1;
+    -fx-padding: 0 40 15 40;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 30, 0, 0, 10);
+}
+.root-bg {
+    -fx-background-color: #0d1b2e;
+}
+.root {
+    -fx-background-color: #0d1b2e;
+}
 .btn-login {
     -fx-background-color: #2563eb;
     -fx-text-fill: white;

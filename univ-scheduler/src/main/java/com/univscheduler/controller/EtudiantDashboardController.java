@@ -4,6 +4,7 @@ import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
 import com.univscheduler.service.ExportService;
 import javafx.beans.property.*;
+import com.univscheduler.service.EmailService;
 import javafx.collections.*;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;

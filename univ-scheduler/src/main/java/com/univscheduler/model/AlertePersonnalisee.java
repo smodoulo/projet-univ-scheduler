@@ -52,11 +52,11 @@ public class AlertePersonnalisee {
                 "Voulez-vous vous déconnecter\nde UNIV-SCHEDULER ?",true);
     }
 
-    // ── confirmer annulation d'un cours ──────────────────────────
-    public static boolean confirmerAnnulationCours(
+    // ── demander motif annulation d'un cours ──────────────────────
+    public static String demanderMotifAnnulation(
             String nomCours, String jour, String heureDebut, String heureFin) {
 
-        final boolean[] resultat = {false};
+        final String[] motif = {null};
 
         Stage fenetre = new Stage();
         fenetre.initModality(Modality.APPLICATION_MODAL);
@@ -65,7 +65,7 @@ public class AlertePersonnalisee {
 
         StackPane overlay = new StackPane();
         overlay.setStyle("-fx-background-color:transparent;");
-        overlay.setPrefSize(520, 340);
+        overlay.setPrefSize(520, 420);
 
         VBox carte = new VBox(0);
         carte.setMaxWidth(440);
@@ -79,11 +79,10 @@ public class AlertePersonnalisee {
         bandeTitre.setAlignment(Pos.CENTER_LEFT);
         bandeTitre.setPadding(new Insets(14,20,14,20));
         bandeTitre.setStyle("-fx-background-color:#1e293b;-fx-background-radius:14 14 0 0;");
-
         Label lblLogo  = new Label("🎓"); lblLogo.setStyle("-fx-font-size:16px;");
         Label lblSep   = new Label("|");  lblSep.setStyle("-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;");
-        Label lblIcone = new Label("❓"); lblIcone.setStyle("-fx-font-size:16px;");
-        Label lblTitre = new Label("Confirmer l'annulation");
+        Label lblIcone = new Label("❌"); lblIcone.setStyle("-fx-font-size:16px;");
+        Label lblTitre = new Label("Annuler ce cours");
         lblTitre.setStyle("-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
         Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
         Label lblApp = new Label("UNIV-SCHEDULER");
@@ -93,33 +92,23 @@ public class AlertePersonnalisee {
                 +"-fx-background-radius:50;-fx-min-width:24;-fx-min-height:24;-fx-cursor:hand;-fx-padding:0;");
         btnX.setOnMouseEntered(e->btnX.setStyle(btnX.getStyle().replace("0.15","0.35")));
         btnX.setOnMouseExited (e->btnX.setStyle(btnX.getStyle().replace("0.35","0.15")));
-        btnX.setOnAction(e->{ resultat[0]=false; fenetre.close(); });
+        btnX.setOnAction(e->fenetre.close());
         bandeTitre.getChildren().addAll(lblLogo,lblSep,lblIcone,lblTitre,esp,lblApp,btnX);
 
-        // ── Ligne décorative bleue ────────────────────────────────
+        // ── Ligne rouge ───────────────────────────────────────────
         Region ligne = new Region();
         ligne.setPrefHeight(3);
-        ligne.setStyle("-fx-background-color:#3b82f6;");
+        ligne.setStyle("-fx-background-color:#ef4444;");
 
         // ── Corps ─────────────────────────────────────────────────
-        HBox corps = new HBox(14);
-        corps.setPadding(new Insets(22,24,14,24));
-        corps.setAlignment(Pos.TOP_LEFT);
+        VBox corps = new VBox(14);
+        corps.setPadding(new Insets(20,24,14,24));
         corps.setStyle("-fx-background-color:#eff6ff;");
 
-        Region barre = new Region();
-        barre.setPrefWidth(4); barre.setPrefHeight(90); barre.setMinHeight(Region.USE_PREF_SIZE);
-        barre.setStyle("-fx-background-color:#3b82f6;-fx-background-radius:4;");
-
-        VBox contenu = new VBox(12);
-
-        Label lblQuestion = new Label("Annuler ce cours ?");
-        lblQuestion.setStyle("-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:#1e3a5f;");
-
+        // Infos cours
         VBox grille = new VBox(0);
         grille.setStyle("-fx-background-color:white;-fx-background-radius:8;"
                 +"-fx-border-color:#e2e8f0;-fx-border-radius:8;-fx-border-width:0.5;");
-
         String[][] infos = {
                 {"Cours", nomCours},
                 {"Jour",  jour + "  " + heureDebut + " – " + heureFin}
@@ -138,18 +127,23 @@ public class AlertePersonnalisee {
             grille.getChildren().add(rangee);
         }
 
-        HBox note = new HBox(8);
-        note.setAlignment(Pos.TOP_LEFT);
-        note.setPadding(new Insets(10,14,10,14));
-        note.setStyle("-fx-background-color:#dbeafe;-fx-background-radius:8;");
-        Label iconeInfo = new Label("ℹ"); iconeInfo.setStyle("-fx-font-size:14px;");
-        Label txtInfo   = new Label("Le gestionnaire sera notifié automatiquement.");
-        txtInfo.setWrapText(true); txtInfo.setMaxWidth(290);
-        txtInfo.setStyle("-fx-font-size:12px;-fx-text-fill:#1e3a5f;-fx-line-spacing:3;");
-        note.getChildren().addAll(iconeInfo, txtInfo);
+        // Champ motif
+        VBox blocMotif = new VBox(6);
+        Label lblMotif = new Label("Motif d'annulation *");
+        lblMotif.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#1e3a5f;");
+        javafx.scene.control.TextArea champMotif = new javafx.scene.control.TextArea();
+        champMotif.setPromptText("Ex: Cours reporté, enseignant absent...");
+        champMotif.setPrefRowCount(3);
+        champMotif.setWrapText(true);
+        champMotif.setStyle("-fx-background-color:white;-fx-border-color:#e2e8f0;"
+                +"-fx-border-radius:8;-fx-background-radius:8;"
+                +"-fx-font-size:13px;-fx-text-fill:#1e293b;");
+        Label lblErreur = new Label("⚠ Veuillez saisir un motif.");
+        lblErreur.setStyle("-fx-text-fill:#ef4444;-fx-font-size:11px;");
+        lblErreur.setVisible(false);
+        blocMotif.getChildren().addAll(lblMotif, champMotif, lblErreur);
 
-        contenu.getChildren().addAll(lblQuestion, grille, note);
-        corps.getChildren().addAll(barre, contenu);
+        corps.getChildren().addAll(grille, blocMotif);
 
         // ── Zone boutons ──────────────────────────────────────────
         HBox zoneBoutons = new HBox(12);
@@ -158,18 +152,22 @@ public class AlertePersonnalisee {
         zoneBoutons.setStyle("-fx-background-color:#f8fafc;-fx-background-radius:0 0 14 14;");
 
         Button btnAnnuler = creerBouton("Annuler","#e2e8f0","#1e293b","#cbd5e1");
-        btnAnnuler.setOnAction(e->{ resultat[0]=false; fenetre.close(); });
+        btnAnnuler.setOnAction(e->fenetre.close());
 
-        Button btnConfirmer = creerBouton("✔ Confirmer","#3b82f6","white","#2563eb");
-        btnConfirmer.setOnAction(e->{ resultat[0]=true; fenetre.close(); });
+        Button btnConfirmer = creerBouton("❌ Confirmer l'annulation","#ef4444","white","#dc2626");
+        btnConfirmer.setOnAction(e->{
+            String m = champMotif.getText().trim();
+            if (m.isEmpty()) { lblErreur.setVisible(true); return; }
+            motif[0] = m;
+            fenetre.close();
+        });
 
         zoneBoutons.getChildren().addAll(btnAnnuler, btnConfirmer);
-
         carte.getChildren().addAll(bandeTitre, ligne, corps, zoneBoutons);
         overlay.getChildren().add(carte);
 
         animerEtAfficher(carte, fenetre);
-        return resultat[0];
+        return motif[0];
     }
 
     // ── dialogue détail signalement ───────────────────────────────
@@ -324,8 +322,7 @@ public class AlertePersonnalisee {
         animerEtAfficher(carte, fenetre);
     }
 
-    // ── ✅ NOUVEAU : dialogue notifications gestionnaire ──────────
-    // Usage : AlertePersonnalisee.afficherNotifications(notifDAO.findByUtilisateur(userId));
+    // ── dialogue notifications ────────────────────────────────────
     public static void afficherNotifications(List<Notification> notifs) {
 
         Stage fenetre = new Stage();
@@ -373,12 +370,10 @@ public class AlertePersonnalisee {
         btnX.setOnAction(e->fenetre.close());
         bandeTitre.getChildren().addAll(lblLogo,lblSep,lblIcone,lblTitre,esp,lblCompteur,lblApp,btnX);
 
-        // ── Ligne décorative bleue ────────────────────────────────
         Region ligne = new Region();
         ligne.setPrefHeight(3);
         ligne.setStyle("-fx-background-color:#3b82f6;");
 
-        // ── Sous-en-tête résumé + légende ─────────────────────────
         HBox sousEntete = new HBox(12);
         sousEntete.setAlignment(Pos.CENTER_LEFT);
         sousEntete.setPadding(new Insets(10,20,10,20));
@@ -397,7 +392,6 @@ public class AlertePersonnalisee {
         );
         sousEntete.getChildren().addAll(lblResume, espSous, legende);
 
-        // ── Liste des notifications ───────────────────────────────
         VBox listeBox = new VBox(8);
         listeBox.setPadding(new Insets(14,16,14,16));
         listeBox.setStyle("-fx-background-color:#f8fafc;");
@@ -428,7 +422,6 @@ public class AlertePersonnalisee {
                         +"-fx-border-color:"+bord+";-fx-border-radius:10;"
                         +"-fx-border-width:"+(nonLu?"1.5":"0.8")+";");
 
-                // Barre latérale colorée si non-lu
                 if (nonLu) {
                     Region barreNonLu = new Region();
                     barreNonLu.setPrefWidth(3); barreNonLu.setPrefHeight(44);
@@ -437,15 +430,12 @@ public class AlertePersonnalisee {
                     rangee.getChildren().add(barreNonLu);
                 }
 
-                // Icône type
                 Label lblIco = new Label(icone);
                 lblIco.setStyle("-fx-font-size:18px;-fx-min-width:22;");
 
-                // Zone texte principale
                 VBox textes = new VBox(4);
                 HBox.setHgrow(textes, Priority.ALWAYS);
 
-                // Badge NOUVEAU si non-lu
                 if (nonLu) {
                     Label badgeNew = new Label("NOUVEAU");
                     badgeNew.setStyle("-fx-background-color:"+fg+";-fx-text-fill:white;"
@@ -476,7 +466,6 @@ public class AlertePersonnalisee {
         scroll.setPrefHeight(Math.min(notifs.size() * 82 + 28, 400));
         scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
 
-        // ── Zone bouton ───────────────────────────────────────────
         HBox zoneBouton = new HBox();
         zoneBouton.setAlignment(Pos.CENTER_RIGHT);
         zoneBouton.setPadding(new Insets(12,24,18,24));

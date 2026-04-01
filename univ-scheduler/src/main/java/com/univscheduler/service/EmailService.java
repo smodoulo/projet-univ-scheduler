@@ -7,26 +7,40 @@ import java.util.Properties;
 
 public class EmailService {
 
-    private static boolean simulationMode = true;
+    private static boolean simulationMode = false; // ← DÉSACTIVÉ par défaut
     private static String smtpHost     = "smtp.gmail.com";
     private static int    smtpPort     = 587;
-    private static String smtpUser     = "";
-    private static String smtpPassword = "";
+    private static String smtpUser     = "lo065657@gmail.com";       // ← hardcodé
+    private static String smtpPassword = "dcysswrxhnddsklq"; // ← remplacez ici
 
     static {
+        System.out.println(">>> [EmailService] Répertoire de travail : "
+                + new java.io.File(".").getAbsolutePath());
+
         try {
             java.io.File f = new java.io.File("email.properties");
+            System.out.println(">>> [EmailService] Fichier email.properties trouvé : " + f.exists());
+            System.out.println(">>> [EmailService] Chemin absolu : " + f.getAbsolutePath());
+
             if (f.exists()) {
                 Properties p = new Properties();
                 p.load(new java.io.FileInputStream(f));
-                smtpHost      = p.getProperty("smtp.host",     "smtp.gmail.com");
-                smtpPort      = Integer.parseInt(p.getProperty("smtp.port", "587"));
-                smtpUser      = p.getProperty("smtp.user",     "");
-                smtpPassword  = p.getProperty("smtp.password", "");
+                smtpHost      = p.getProperty("smtp.host",     smtpHost);
+                smtpPort      = Integer.parseInt(p.getProperty("smtp.port", String.valueOf(smtpPort)));
+                smtpUser      = p.getProperty("smtp.user",     smtpUser);
+                smtpPassword  = p.getProperty("smtp.password", smtpPassword);
                 simulationMode = !"true".equalsIgnoreCase(
-                        p.getProperty("smtp.enabled", "false"));
+                        p.getProperty("smtp.enabled", "true"));
+                System.out.println(">>> [EmailService] Config chargée depuis email.properties");
+            } else {
+                System.out.println(">>> [EmailService] Fichier absent — utilisation des valeurs hardcodées");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println(">>> [EmailService] Erreur chargement config : " + e.getMessage());
+        }
+
+        System.out.println(">>> [EmailService] Mode simulation : " + simulationMode);
+        System.out.println(">>> [EmailService] Utilisateur SMTP : " + smtpUser);
     }
 
     // ========================= CORE SEND =========================
@@ -50,10 +64,10 @@ public class EmailService {
 
         try {
             Properties props = new Properties();
-            props.put("mail.smtp.auth",           "true");
-            props.put("mail.smtp.starttls.enable","true");
-            props.put("mail.smtp.host",            smtpHost);
-            props.put("mail.smtp.port",            String.valueOf(smtpPort));
+            props.put("mail.smtp.auth",            "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.host",             smtpHost);
+            props.put("mail.smtp.port",             String.valueOf(smtpPort));
 
             Session session = Session.getInstance(props, new Authenticator() {
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -75,17 +89,16 @@ public class EmailService {
             msg.setContent(mp);
 
             Transport.send(msg);
-            System.out.println("[EMAIL ENVOYÉ] À : " + user.getEmail());
+            System.out.println("[EMAIL ENVOYÉ] ✅ À : " + user.getEmail());
         } catch (Exception e) {
-            System.err.println("[EMAIL ERREUR] " + e.getMessage());
+            System.err.println("[EMAIL ERREUR] ❌ " + e.getMessage());
+            e.printStackTrace(); // ← pour voir l'erreur complète si ça échoue
         }
     }
 
     // ========================= TYPED NOTIFICATIONS =========================
 
-    /** Notification de validation de réservation */
-    public static void notifierValidationReservation(Utilisateur user,
-                                                     Reservation r) {
+    public static void notifierValidationReservation(Utilisateur user, Reservation r) {
         String subject = "✅ Réservation validée — Salle " + r.getSalleNumero();
         String body = "Bonjour " + user.getNomComplet() + ",\n\n"
                 + "Votre réservation a été validée :\n"
@@ -97,9 +110,7 @@ public class EmailService {
         sendNotification(user, subject, body);
     }
 
-    /** Notification de refus de réservation */
-    public static void notifierRefusReservation(Utilisateur user,
-                                                Reservation r) {
+    public static void notifierRefusReservation(Utilisateur user, Reservation r) {
         String subject = "❌ Réservation refusée — Salle " + r.getSalleNumero();
         String body = "Bonjour " + user.getNomComplet() + ",\n\n"
                 + "Votre réservation de la salle " + r.getSalleNumero()
@@ -110,10 +121,8 @@ public class EmailService {
         sendNotification(user, subject, body);
     }
 
-    /** Notification de changement de salle pour un cours */
     public static void notifierChangementSalle(Utilisateur user,
-                                               Cours cours,
-                                               String ancienneSalle) {
+                                               Cours cours, String ancienneSalle) {
         String subject = "🔔 Changement de salle — " + cours.getMatiereNom();
         String body = "Bonjour " + user.getNomComplet() + ",\n\n"
                 + "La salle de votre cours a été modifiée :\n"
@@ -126,9 +135,7 @@ public class EmailService {
         sendNotification(user, subject, body);
     }
 
-    /** Rappel de fin de réservation */
-    public static void envoyerRappelFinReservation(Utilisateur user,
-                                                   Reservation r) {
+    public static void envoyerRappelFinReservation(Utilisateur user, Reservation r) {
         String subject = "⏰ Rappel — Fin de réservation bientôt";
         String body = "Bonjour " + user.getNomComplet() + ",\n\n"
                 + "Votre réservation de la salle " + r.getSalleNumero()
@@ -141,7 +148,6 @@ public class EmailService {
         sendNotification(user, subject, body);
     }
 
-    /** Alerte conflit de planification à l'admin */
     public static void alerterConflitAdmin(Utilisateur admin, String details) {
         String subject = "⚠️ Conflit de planification détecté";
         String body = "Bonjour " + admin.getNomComplet() + ",\n\n"
@@ -152,28 +158,23 @@ public class EmailService {
         sendNotification(admin, subject, body);
     }
 
-    // ✅ Notifier un étudiant d'une nouvelle réservation de l'enseignant
     public static void notifierEtudiantReservation(Utilisateur etudiant,
                                                    Reservation reserv,
                                                    String enseignantNom) {
         String sujet = "📌 Nouvelle réservation de salle — "
                 + reserv.getSalleNumero()
                 + " le " + reserv.getDateReservation().toLocalDate();
-
         String corps = "Bonjour " + etudiant.getPrenom() + ",\n\n"
                 + "Votre enseignant " + enseignantNom
                 + " a effectué une réservation de salle :\n\n"
                 + "  📍 Salle    : " + reserv.getSalleNumero()    + "\n"
-                + "  📅 Date     : "
-                + reserv.getDateReservation().toLocalDate()   + "\n"
+                + "  📅 Date     : " + reserv.getDateReservation().toLocalDate() + "\n"
                 + "  ⏰ Horaire  : "
                 + reserv.getDateReservation().toLocalTime().getHour()
                 + "h00 → "
                 + reserv.getDateFin().toLocalTime().getHour() + "h00\n"
-                + "  📝 Motif    : " + reserv.getMotif()          + "\n\n"
+                + "  📝 Motif    : " + reserv.getMotif() + "\n\n"
                 + "Cordialement,\nUniv-Scheduler";
-
-        // ✅ sendNotification() au lieu de envoyerEmail() qui n'existe pas
         sendNotification(etudiant, sujet, corps);
     }
 
