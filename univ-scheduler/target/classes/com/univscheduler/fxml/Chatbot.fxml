@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<AnchorPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.univscheduler.controller.ChatbotController"
+            prefWidth="400" prefHeight="540"
+            styleClass="chatbot-root">
+
+    <VBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+
+        <!-- Header drag -->
+        <HBox styleClass="chatbot-header" alignment="CENTER_LEFT" spacing="10"
+              onMousePressed="#handleHeaderPressed"
+              onMouseDragged="#handleHeaderDragged">
+            <StackPane>
+                <Circle radius="18" styleClass="avatar-circle"/>
+                <Label text="🤖" style="-fx-font-size:18px;"/>
+            </StackPane>
+            <VBox spacing="1" HBox.hgrow="ALWAYS">
+                <Label text="Assistant UNIV-SCHEDULER" styleClass="chatbot-title"/>
+                <HBox spacing="4" alignment="CENTER_LEFT">
+                    <Circle radius="4" styleClass="status-dot"/>
+                    <Label text="En ligne" styleClass="chatbot-status"/>
+                </HBox>
+            </VBox>
+            <Button text="✕" styleClass="chatbot-close" onAction="#handleClose"/>
+        </HBox>
+
+        <!-- Zone messages -->
+        <ScrollPane fx:id="scrollPane" VBox.vgrow="ALWAYS"
+                    fitToWidth="true" styleClass="chatbot-scroll"
+                    hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+            <VBox fx:id="messagesBox" spacing="12"
+                  style="-fx-padding: 16 14;" fillWidth="true"/>
+        </ScrollPane>
+
+        <!-- Suggestions -->
+        <HBox fx:id="suggestionsBox" styleClass="chatbot-suggestions"
+              spacing="6" alignment="CENTER_LEFT">
+            <Button fx:id="btn1" text="📅 Planning"    styleClass="btn-suggest" onAction="#suggest1"/>
+            <Button fx:id="btn2" text="🏛 Salles"      styleClass="btn-suggest" onAction="#suggest2"/>
+            <Button fx:id="btn3" text="🔔 Notifs"      styleClass="btn-suggest" onAction="#suggest3"/>
+        </HBox>
+
+        <!-- Barre saisie -->
+        <HBox styleClass="chatbot-input-bar" spacing="8" alignment="CENTER">
+            <TextField fx:id="inputField"
+                       promptText="Écrivez votre message..."
+                       styleClass="chatbot-input"
+                       HBox.hgrow="ALWAYS"
+                       onAction="#handleSend"/>
+            <Button text="➤" styleClass="chatbot-send" onAction="#handleSend"/>
+        </HBox>
+
+    </VBox>
+</AnchorPane>

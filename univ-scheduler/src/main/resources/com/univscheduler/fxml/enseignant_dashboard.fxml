@@ -11,9 +11,15 @@
             <Label text="Enseignant" styleClass="nav-role-badge-orange"/>
             <Label fx:id="notifBadge" text="🔔" styleClass="nav-user"/>
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
+            <Button text="🤖 Assistant"
+                    onAction="#openChatbot"
+                    style="-fx-background-color:#6366f1;-fx-text-fill:white;
+                           -fx-font-weight:bold;-fx-padding:6 14;
+                           -fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;"/>
             <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
         </HBox>
     </top>
+
     <center>
         <ScrollPane fitToWidth="true">
             <VBox spacing="16" style="-fx-padding:20;">

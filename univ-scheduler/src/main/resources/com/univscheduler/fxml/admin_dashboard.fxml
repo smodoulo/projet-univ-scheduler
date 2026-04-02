@@ -11,6 +11,11 @@
             <Label text="Administration" styleClass="nav-role-badge"/>
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
             <Button text="🔄 Actualiser" styleClass="btn-secondary" onAction="#handleRefresh" style="-fx-font-size:11px;"/>
+            <Button text="🤖 Assistant"
+                    onAction="#openChatbot"
+                    style="-fx-background-color:#6366f1;-fx-text-fill:white;
+                           -fx-font-weight:bold;-fx-padding:6 14;
+                           -fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;"/>
             <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
         </HBox>
     </top>

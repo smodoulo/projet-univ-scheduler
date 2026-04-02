@@ -262,3 +262,173 @@
     -fx-text-fill: #cbd5e1;
     -fx-font-size: 11px;
 }
+
+/* ===================== CHATBOT ===================== */
+.chatbot-root {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 32, 0, 0, 8);
+}
+.chatbot-header {
+    -fx-background-color: #1e293b;
+    -fx-padding: 14 16;
+    -fx-background-radius: 20 20 0 0;
+    -fx-cursor: move;
+}
+.avatar-circle {
+    -fx-fill: rgba(59,130,246,0.2);
+    -fx-stroke: #3b82f6;
+    -fx-stroke-width: 1.5;
+}
+.chatbot-title {
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.status-dot {
+    -fx-fill: #10b981;
+    -fx-effect: dropshadow(gaussian, rgba(16,185,129,0.6), 4, 0, 0, 0);
+}
+.chatbot-status {
+    -fx-text-fill: #10b981;
+    -fx-font-size: 10px;
+}
+.chatbot-close {
+    -fx-background-color: transparent;
+    -fx-text-fill: #64748b;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-padding: 4 8;
+    -fx-background-radius: 8;
+}
+.chatbot-close:hover {
+    -fx-background-color: #ef4444;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+}
+.chatbot-scroll {
+    -fx-background-color: #f8fafc;
+    -fx-border-width: 0;
+    -fx-background: #f8fafc;
+}
+.chatbot-scroll .viewport {
+    -fx-background-color: #f8fafc;
+}
+.chatbot-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6;
+}
+.chatbot-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #cbd5e1;
+    -fx-background-radius: 3;
+}
+
+/* Bulles messages */
+.msg-user {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-padding: 10 14;
+    -fx-background-radius: 18 4 18 18;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.25), 6, 0, 0, 2);
+}
+.msg-bot {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1e293b;
+    -fx-padding: 10 14;
+    -fx-background-radius: 4 18 18 18;
+    -fx-font-size: 13px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+    -fx-border-radius: 4 18 18 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 4, 0, 0, 1);
+}
+
+/* Suggestions */
+.chatbot-suggestions {
+    -fx-background-color: #f8fafc;
+    -fx-padding: 8 10;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1 0 0 0;
+}
+.btn-suggest {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #2563eb;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 10;
+    -fx-background-radius: 20;
+    -fx-border-color: #bfdbfe;
+    -fx-border-width: 1;
+    -fx-border-radius: 20;
+    -fx-cursor: hand;
+}
+.btn-suggest:hover {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-border-color: #2563eb;
+}
+
+/* Barre saisie */
+.chatbot-input-bar {
+    -fx-background-color: #ffffff;
+    -fx-padding: 10 12;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1 0 0 0;
+    -fx-background-radius: 0 0 20 20;
+}
+.chatbot-input {
+    -fx-background-color: #f1f5f9;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-padding: 10 16;
+    -fx-font-size: 13px;
+    -fx-text-fill: #1e293b;
+    -fx-prompt-text-fill: #94a3b8;
+}
+.chatbot-input:focused {
+    -fx-background-color: #e2e8f0;
+    -fx-effect: none;
+}
+.chatbot-send {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-background-radius: 50%;
+    -fx-min-width: 38;
+    -fx-min-height: 38;
+    -fx-max-width: 38;
+    -fx-max-height: 38;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.4), 8, 0, 0, 2);
+}
+.chatbot-send:hover {
+    -fx-background-color: #1d4ed8;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.6), 12, 0, 0, 3);
+}
+.btn-chatbot-float {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-size: 22px;
+    -fx-background-radius: 50%;
+    -fx-min-width: 56;
+    -fx-min-height: 56;
+    -fx-max-width: 56;
+    -fx-max-height: 56;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.5), 16, 0, 0, 4);
+    -fx-padding: 0;
+}
+.btn-chatbot-float:hover {
+    -fx-background-color: #1d4ed8;
+    -fx-effect: dropshadow(gaussian, rgba(37,99,235,0.7), 20, 0, 0, 6);
+}
