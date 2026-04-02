@@ -217,8 +217,6 @@
                                         <Label fx:id="profilClasse" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
                                         <Label text="🪪 INE"     styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
                                         <Label fx:id="profilINE"    text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-                                        <Label text="📧 Email"   styleClass="form-label" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilEmailDetail" text="—" style="-fx-font-size:14px;-fx-text-fill:#64748b;" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
                                     </GridPane>
                                 </VBox>
                             </VBox>
