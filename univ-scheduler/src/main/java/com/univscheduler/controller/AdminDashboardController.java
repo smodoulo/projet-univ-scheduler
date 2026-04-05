@@ -2,69 +2,93 @@ package com.univscheduler.controller;
 
 import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
+import com.univscheduler.model.AlertePersonnalisee;
 import javafx.beans.property.*;
 import javafx.collections.*;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
-import java.util.Map;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import java.util.List;
 
 public class AdminDashboardController extends BaseController {
-    @FXML private Label welcomeLabel;
-    @FXML private Label totalUsersLabel, totalSallesLabel, totalCoursLabel, totalEnsLabel;
-    @FXML private Label sallesDispoLabel;
 
-    @FXML private TableView<Utilisateur> userTable;
-    @FXML private TableColumn<Utilisateur, Integer> colUserId;
-    @FXML private TableColumn<Utilisateur, String> colUserNom, colUserPrenom, colUserEmail, colUserRole;
+    // ── Palette — seules les couleurs réellement utilisées ────────
+    private static final String T_MID    = "#2a9cb0";
+    private static final String T_LIGHT  = "#4ecdc4";
+    private static final String T_BG     = "#e8f4f4";
+    private static final String T_SOFT   = "#f0f9fa";
+    private static final String GREEN    = "#3ecf8e";
+    private static final String GOLD     = "#f0a500";
+    private static final String RED      = "#e05c5c";
+    private static final String PURPLE   = "#7c6fcf";
+    private static final String MUTED    = "#9eb3bf";
+    private static final String SECOND   = "#6b8394";
+    private static final String BORDER   = "#c0dde4";
+
+    // ── FXML ──────────────────────────────────────────────────────
+    @FXML private Label welcomeLabel;
+    @FXML private HBox  statCardsContainer;   // ← 5 cartes KPI
+
+    @FXML private TableView<Utilisateur>       userTable;
+    @FXML private TableColumn<Utilisateur,Integer> colUserId;
+    @FXML private TableColumn<Utilisateur,String>  colUserNom, colUserPrenom, colUserEmail, colUserRole;
     @FXML private TextField nomField, prenomField, emailField, passwordField;
     @FXML private ComboBox<String> roleCombo;
     @FXML private Label userFormTitle;
 
-    @FXML private TableView<Salle> salleTable;
-    @FXML private TableColumn<Salle, Integer> colSalleId, colSalleCap;
-    @FXML private TableColumn<Salle, String> colSalleNum, colSalleType, colSalleBat;
-    @FXML private TableColumn<Salle, Boolean> colSalleDispo;
-    @FXML private TextField salleNumField, sallecapField;
-    @FXML private ComboBox<String> salleTypeCombo;
+    @FXML private TableView<Salle>         salleTable;
+    @FXML private TableColumn<Salle,Integer> colSalleId, colSalleCap;
+    @FXML private TableColumn<Salle,String>  colSalleNum, colSalleType, colSalleBat;
+    @FXML private TableColumn<Salle,Boolean> colSalleDispo;
+    @FXML private TextField salleNumField, salleCapField;
+    @FXML private ComboBox<String>   salleTypeCombo;
     @FXML private ComboBox<Batiment> salleBatCombo;
     @FXML private CheckBox salleDispoCheck;
     @FXML private Label salleFormTitle;
 
-    @FXML private TableView<Batiment> batTable;
-    @FXML private TableColumn<Batiment, Integer> colBatId, colBatEtages;
-    @FXML private TableColumn<Batiment, String> colBatNom, colBatLoc;
+    @FXML private TableView<Batiment>          batTable;
+    @FXML private TableColumn<Batiment,Integer> colBatId, colBatEtages;
+    @FXML private TableColumn<Batiment,String>  colBatNom, colBatLoc;
     @FXML private TextField batNomField, batLocField, batEtagesField;
     @FXML private Label batFormTitle;
 
-    @FXML private TableView<Equipement> equipTable;
-    @FXML private TableColumn<Equipement, Integer> colEquipId;
-    @FXML private TableColumn<Equipement, String> colEquipNom, colEquipType, colEquipEtat, colEquipSalle;
+    @FXML private TableView<Equipement>          equipTable;
+    @FXML private TableColumn<Equipement,Integer> colEquipId;
+    @FXML private TableColumn<Equipement,String>  colEquipNom, colEquipType, colEquipEtat, colEquipSalle;
     @FXML private TextField equipNomField, equipDescField;
     @FXML private ComboBox<String> equipTypeCombo, equipEtatCombo;
-    @FXML private ComboBox<Salle> equipSalleCombo;
+    @FXML private ComboBox<Salle>  equipSalleCombo;
     @FXML private CheckBox equipDispoCheck;
     @FXML private Label equipFormTitle;
 
     @FXML private VBox chartUsersContainer, chartSallesContainer, chartCoursContainer;
 
+    // ── DAO ───────────────────────────────────────────────────────
     private final UtilisateurDAO utilisateurDAO = new UtilisateurDAO();
-    private final SalleDAO salleDAO = new SalleDAO();
-    private final CoursDAO coursDAO = new CoursDAO();
-    private final BatimentDAO batimentDAO = new BatimentDAO();
-    private final EquipementDAO equipementDAO = new EquipementDAO();
+    private final SalleDAO       salleDAO       = new SalleDAO();
+    private final CoursDAO       coursDAO       = new CoursDAO();
+    private final BatimentDAO    batimentDAO    = new BatimentDAO();
+    private final EquipementDAO  equipementDAO  = new EquipementDAO();
 
-    private final ObservableList<Utilisateur> userList = FXCollections.observableArrayList();
-    private final ObservableList<Salle> salleList = FXCollections.observableArrayList();
-    private final ObservableList<Batiment> batList = FXCollections.observableArrayList();
-    private final ObservableList<Equipement> equipList = FXCollections.observableArrayList();
+    private final ObservableList<Utilisateur> userList  = FXCollections.observableArrayList();
+    private final ObservableList<Salle>       salleList = FXCollections.observableArrayList();
+    private final ObservableList<Batiment>    batList   = FXCollections.observableArrayList();
+    private final ObservableList<Equipement>  equipList = FXCollections.observableArrayList();
 
-    private Utilisateur selectedUser = null;
-    private Salle selectedSalle = null;
-    private Batiment selectedBat = null;
-    private Equipement selectedEquip = null;
+    private Utilisateur selectedUser  = null;
+    private Salle       selectedSalle = null;
+    private Batiment    selectedBat   = null;
+    private Equipement  selectedEquip = null;
 
+    // Cache KPI — long pour éviter les casts redondants
+    private long kpiUsers, kpiSalles, kpiCours;
+
+    // ════════════════════════════════════════════════════════════════
     @Override
     protected void onUserLoaded() {
         welcomeLabel.setText("Bonjour, " + currentUser.getNomComplet());
@@ -73,8 +97,200 @@ public class AdminDashboardController extends BaseController {
         salleTypeCombo.setItems(FXCollections.observableArrayList("TD","TP","AMPHI"));
         equipTypeCombo.setItems(FXCollections.observableArrayList("PROJECTEUR","TABLEAU","CLIM","ORDINATEUR","AUTRE"));
         equipEtatCombo.setItems(FXCollections.observableArrayList("BON","MOYEN","MAUVAIS","EN_PANNE"));
-        loadAll(); buildCharts();
+        loadAll();
+        buildCharts();
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  5 CARTES KPI CLIQUABLES
+    // ════════════════════════════════════════════════════════════════
+
+    private void buildStatCards() {
+        if (statCardsContainer == null) return;
+        statCardsContainer.getChildren().clear();
+
+        // ── Données Utilisateurs ──────────────────────────────────
+        long nbAdmin = utilisateurDAO.countByRole("ADMIN");
+        long nbGest  = utilisateurDAO.countByRole("GESTIONNAIRE");
+        long nbEns   = utilisateurDAO.countByRole("ENSEIGNANT");
+        long nbEtu   = utilisateurDAO.countByRole("ETUDIANT");
+
+        // ── Données Salles ────────────────────────────────────────
+        List<Salle> salles = salleDAO.findAll();
+        long nbTD    = salles.stream().filter(s -> "TD".equalsIgnoreCase(s.getTypeSalle())).count();
+        long nbTP    = salles.stream().filter(s -> "TP".equalsIgnoreCase(s.getTypeSalle())).count();
+        long nbAmphi = salles.stream().filter(s -> "AMPHI".equalsIgnoreCase(s.getTypeSalle())).count();
+        long nbDispo = salleDAO.countDisponibles();
+
+        // ── Données Cours ─────────────────────────────────────────
+        List<Cours> cours = coursDAO.findAll();
+        long nbPlanif  = cours.stream().filter(c -> "PLANIFIE".equalsIgnoreCase(c.getStatut())).count();
+        long nbRealise = cours.stream().filter(c -> "TERMINE".equalsIgnoreCase(c.getStatut())
+                || "REALISE".equalsIgnoreCase(c.getStatut())).count();
+        long nbAnnule  = cours.stream().filter(c -> "ANNULE".equalsIgnoreCase(c.getStatut())).count();
+        String tauxAnnulation = kpiCours > 0
+                ? String.format("%.0f%%", nbAnnule * 100.0 / kpiCours) : "—";
+
+        // ── Données Bâtiments ─────────────────────────────────────
+        List<Batiment> bats = batimentDAO.findAll();
+        long kpiBats = bats.size();
+        long nbEtagesTotal = bats.stream().mapToLong(Batiment::getNombreEtages).sum();
+
+        // ── Données Equipements ───────────────────────────────────
+        List<Equipement> equips = equipementDAO.findAll();
+        long kpiEquips    = equips.size();
+        long nbEquipDispo = equips.stream().filter(Equipement::isDisponible).count();
+        long nbEnPanne    = equips.stream().filter(e -> "EN_PANNE".equalsIgnoreCase(e.getEtat())).count();
+        long nbProjecteur = equips.stream().filter(e -> "PROJECTEUR".equalsIgnoreCase(e.getTypeEquipement())).count();
+        long nbTableau    = equips.stream().filter(e -> "TABLEAU".equalsIgnoreCase(e.getTypeEquipement())).count();
+        long nbOrdinateur = equips.stream().filter(e -> "ORDINATEUR".equalsIgnoreCase(e.getTypeEquipement())).count();
+        long nbAutre      = kpiEquips - nbProjecteur - nbTableau - nbOrdinateur;
+
+        // ═══════════════════════════════════════════════════════════
+        // CARTE 1 — UTILISATEURS (teal-mid)
+        // ═══════════════════════════════════════════════════════════
+        statCardsContainer.getChildren().add(buildCard(
+                "UTILISATEURS", String.valueOf(kpiUsers),
+                "Admin · Gest. · Ens. · Etud.", "👥", T_MID,
+                () -> showDetailPopup("👥 Utilisateurs — Détail par rôle", new String[][]{
+                        {"👑 Administrateurs", String.valueOf(nbAdmin)},
+                        {"📋 Gestionnaires",   String.valueOf(nbGest)},
+                        {"👨 Enseignants",     String.valueOf(nbEns)},
+                        {"🎓 Etudiants",       String.valueOf(nbEtu)},
+                        {"📊 Total",           String.valueOf(kpiUsers)},
+                })
+        ));
+
+        // ═══════════════════════════════════════════════════════════
+        // CARTE 2 — SALLES (vert)
+        // ═══════════════════════════════════════════════════════════
+        statCardsContainer.getChildren().add(buildCard(
+                "SALLES", String.valueOf(kpiSalles),
+                "Amphithéatres, TD & TP", "🏫", GREEN,
+                () -> showDetailPopup("🏫 Salles — Répartition", new String[][]{
+                        {"📐 TD (Travaux Dirigés)",   String.valueOf(nbTD)},
+                        {"🔬 TP (Travaux Pratiques)", String.valueOf(nbTP)},
+                        {"🎤 Amphithéatres",          String.valueOf(nbAmphi)},
+                        {"✅ Disponibles",            String.valueOf(nbDispo)},
+                        {"🔒 Indisponibles",          String.valueOf(kpiSalles - nbDispo)},
+                        {"📊 Total",                  String.valueOf(kpiSalles)},
+                })
+        ));
+
+        // ═══════════════════════════════════════════════════════════
+        // CARTE 3 — COURS PLANIFIES (or)
+        // ═══════════════════════════════════════════════════════════
+        statCardsContainer.getChildren().add(buildCard(
+                "COURS PLANIFIES", String.valueOf(nbPlanif),
+                "Sur " + kpiCours + " cours total", "📅", GOLD,
+                () -> showDetailPopup("📅 Cours — Répartition par statut", new String[][]{
+                        {"📅 Planifiés",       String.valueOf(nbPlanif)},
+                        {"✅ Réalisés",        String.valueOf(nbRealise)},
+                        {"❌ Annulés",         String.valueOf(nbAnnule)},
+                        {"📊 Total",           String.valueOf(kpiCours)},
+                        {"📉 Taux annulation", tauxAnnulation},
+                })
+        ));
+
+        // ═══════════════════════════════════════════════════════════
+        // CARTE 4 — BATIMENTS (violet) — remplace Enseignants
+        // ═══════════════════════════════════════════════════════════
+        statCardsContainer.getChildren().add(buildCard(
+                "BATIMENTS", String.valueOf(kpiBats),
+                "Bâtiments du campus", "🏢", PURPLE,
+                () -> showDetailPopup("🏢 Bâtiments", new String[][]{
+                        {"📊 Total bâtiments",     String.valueOf(kpiBats)},
+                        {"🏫 Total salles",        String.valueOf(kpiSalles)},
+                        {"📐 Etages total",        String.valueOf(nbEtagesTotal)},
+                        {"📍 Salles/bâtiment moy.",
+                                kpiBats > 0 ? String.format("%.1f", (double) kpiSalles / kpiBats) : "—"},
+                })
+        ));
+
+        // ═══════════════════════════════════════════════════════════
+        // CARTE 5 — EQUIPEMENTS (rouge) — remplace Salles Dispo
+        // ═══════════════════════════════════════════════════════════
+        statCardsContainer.getChildren().add(buildCard(
+                "EQUIPEMENTS", String.valueOf(kpiEquips),
+                "Matériel des salles", "🔧", RED,
+                () -> showDetailPopup("🔧 Equipements", new String[][]{
+                        {"📊 Total équipements",  String.valueOf(kpiEquips)},
+                        {"✅ Disponibles",        String.valueOf(nbEquipDispo)},
+                        {"🔴 En panne",           String.valueOf(nbEnPanne)},
+                        {"📽 Projecteurs",        String.valueOf(nbProjecteur)},
+                        {"📋 Tableaux",           String.valueOf(nbTableau)},
+                        {"💻 Ordinateurs",        String.valueOf(nbOrdinateur)},
+                        {"📦 Autres",             String.valueOf(Math.max(0, nbAutre))},
+                })
+        ));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    /** Carte KPI cliquable — style Image 1 */
+    private VBox buildCard(String label, String value, String subtitle,
+                           String icon, String color, Runnable onClick) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(20, 22, 20, 22));
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        String styleBase =
+                "-fx-background-color:white;" +
+                        "-fx-background-radius:16;" +
+                        "-fx-border-color:" + color + " transparent transparent transparent;" +
+                        "-fx-border-width:4 0 0 0;" +
+                        "-fx-border-radius:16;" +
+                        "-fx-cursor:hand;";
+        card.setStyle(styleBase);
+
+        DropShadow shadow = new DropShadow(12, Color.color(0, 0, 0, 0.07));
+        shadow.setOffsetY(3);
+        card.setEffect(shadow);
+
+        // Ligne titre + icône filigrane
+        HBox topRow = new HBox();
+        topRow.setAlignment(Pos.CENTER_LEFT);
+        Label labelLbl = new Label(label);
+        labelLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:" + SECOND + ";");
+        Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size:28px;-fx-opacity:0.18;");
+        topRow.getChildren().addAll(labelLbl, spacer, iconLbl);
+
+        // Valeur principale
+        Label valueLbl = new Label(value);
+        valueLbl.setStyle("-fx-font-size:42px;-fx-font-weight:bold;-fx-text-fill:" + color + ";");
+
+        // Sous-titre
+        Label subtitleLbl = new Label(subtitle);
+        subtitleLbl.setStyle("-fx-font-size:11px;-fx-text-fill:" + MUTED + ";");
+
+        card.getChildren().addAll(topRow, valueLbl, subtitleLbl);
+
+        // Hover
+        DropShadow hoverShadow = new DropShadow(20, Color.web(color, 0.18));
+        hoverShadow.setOffsetY(5);
+        card.setOnMouseEntered(e -> {
+            card.setStyle(styleBase.replace("white", "#f7fcfd"));
+            card.setEffect(hoverShadow);
+        });
+        card.setOnMouseExited(e -> {
+            card.setStyle(styleBase);
+            card.setEffect(shadow);
+        });
+
+        // Clic
+        card.setOnMouseClicked(e -> { if (onClick != null) onClick.run(); });
+        return card;
+    }
+
+    /** Popup détail via AlertePersonnalisee */
+    private void showDetailPopup(String titre, String[][] lignes) {
+        AlertePersonnalisee.afficherDetailSignalement(0, titre, lignes, null, null, null, T_MID);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Setup Tables
+    // ════════════════════════════════════════════════════════════════
 
     private void setupUserTable() {
         colUserId.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getId()).asObject());
@@ -83,8 +299,8 @@ public class AdminDashboardController extends BaseController {
         colUserEmail.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getEmail()));
         colUserRole.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getRole()));
         userTable.setItems(userList);
-        userTable.getSelectionModel().selectedItemProperty().addListener((o,old,u) -> {
-            if(u!=null){ selectedUser=u; fillUserForm(u); }
+        userTable.getSelectionModel().selectedItemProperty().addListener((o, old, u) -> {
+            if (u != null) { selectedUser = u; fillUserForm(u); }
         });
     }
 
@@ -93,11 +309,12 @@ public class AdminDashboardController extends BaseController {
         colSalleNum.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getNumero()));
         colSalleType.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getTypeSalle()));
         colSalleCap.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getCapacite()).asObject());
-        colSalleBat.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getBatimentNom()!=null?d.getValue().getBatimentNom():""));
+        colSalleBat.setCellValueFactory(d -> new SimpleStringProperty(
+                d.getValue().getBatimentNom() != null ? d.getValue().getBatimentNom() : ""));
         colSalleDispo.setCellValueFactory(d -> new SimpleBooleanProperty(d.getValue().isDisponible()));
         salleTable.setItems(salleList);
-        salleTable.getSelectionModel().selectedItemProperty().addListener((o,old,s) -> {
-            if(s!=null){ selectedSalle=s; fillSalleForm(s); }
+        salleTable.getSelectionModel().selectedItemProperty().addListener((o, old, s) -> {
+            if (s != null) { selectedSalle = s; fillSalleForm(s); }
         });
     }
 
@@ -107,8 +324,8 @@ public class AdminDashboardController extends BaseController {
         colBatLoc.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getLocalisation()));
         colBatEtages.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getNombreEtages()).asObject());
         batTable.setItems(batList);
-        batTable.getSelectionModel().selectedItemProperty().addListener((o,old,b) -> {
-            if(b!=null){ selectedBat=b; fillBatForm(b); }
+        batTable.getSelectionModel().selectedItemProperty().addListener((o, old, b) -> {
+            if (b != null) { selectedBat = b; fillBatForm(b); }
         });
     }
 
@@ -119,15 +336,20 @@ public class AdminDashboardController extends BaseController {
         colEquipEtat.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getEtat()));
         colEquipSalle.setCellValueFactory(d -> {
             String sn = equipSalleCombo.getItems().stream()
-                .filter(s -> s.getId()==d.getValue().getSalleId())
-                .map(Salle::getNumero).findFirst().orElse(""+d.getValue().getSalleId());
+                    .filter(s -> s.getId() == d.getValue().getSalleId())
+                    .map(Salle::getNumero).findFirst()
+                    .orElse(String.valueOf(d.getValue().getSalleId()));
             return new SimpleStringProperty(sn);
         });
         equipTable.setItems(equipList);
-        equipTable.getSelectionModel().selectedItemProperty().addListener((o,old,e) -> {
-            if(e!=null){ selectedEquip=e; fillEquipForm(e); }
+        equipTable.getSelectionModel().selectedItemProperty().addListener((o, old, e) -> {
+            if (e != null) { selectedEquip = e; fillEquipForm(e); }
         });
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Data
+    // ════════════════════════════════════════════════════════════════
 
     private void loadAll() {
         userList.setAll(utilisateurDAO.findAll());
@@ -136,65 +358,92 @@ public class AdminDashboardController extends BaseController {
         equipList.setAll(equipementDAO.findAll());
         salleBatCombo.setItems(FXCollections.observableArrayList(batimentDAO.findAll()));
         equipSalleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
-        totalUsersLabel.setText(String.valueOf(userList.size()));
-        totalSallesLabel.setText(String.valueOf(salleList.size()));
-        totalCoursLabel.setText(String.valueOf(coursDAO.count()));
-        totalEnsLabel.setText(String.valueOf(utilisateurDAO.countByRole("ENSEIGNANT")));
-        if (sallesDispoLabel != null) sallesDispoLabel.setText(String.valueOf(salleDAO.countDisponibles()));
+
+        // Pas de cast redondant — les méthodes retournent déjà long
+        kpiUsers  = userList.size();
+        kpiSalles = salleList.size();
+        kpiCours  = coursDAO.count();
+
+        buildStatCards();
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Charts
+    // ════════════════════════════════════════════════════════════════
 
     private void buildCharts() {
         if (chartUsersContainer != null) {
             CategoryAxis xA = new CategoryAxis(); NumberAxis yA = new NumberAxis();
             xA.setLabel("Rôle"); yA.setLabel("Nombre");
-            BarChart<String,Number> bar = new BarChart<>(xA,yA);
-            bar.setTitle("👥 Utilisateurs par Rôle"); bar.setLegendVisible(false); bar.setPrefHeight(220);
-            XYChart.Series<String,Number> series = new XYChart.Series<>();
-            utilisateurDAO.countByAllRoles().forEach((k,v) -> series.getData().add(new XYChart.Data<>(k,v)));
-            bar.getData().add(series);
+            BarChart<String, Number> bar = new BarChart<>(xA, yA);
+            bar.setTitle("👥 Utilisateurs par Rôle");
+            bar.setLegendVisible(false); bar.setPrefHeight(220);
+            bar.setStyle("-fx-background-color:transparent;");
+            XYChart.Series<String, Number> s = new XYChart.Series<>();
+            utilisateurDAO.countByAllRoles().forEach((k, v) -> s.getData().add(new XYChart.Data<>(k, v)));
+            bar.getData().add(s);
+            bar.getData().get(0).getData().forEach(d -> {
+                if (d.getNode() != null)
+                    d.getNode().setStyle("-fx-bar-fill:" + T_MID + ";-fx-background-radius:6 6 2 2;");
+            });
             chartUsersContainer.getChildren().setAll(bar);
         }
         if (chartSallesContainer != null) {
-            PieChart pie = new PieChart(); pie.setTitle("🏫 Salles par Type"); pie.setPrefHeight(220);
-            salleDAO.countByType().forEach((k,v) -> pie.getData().add(new PieChart.Data(k+" ("+v+")",v)));
+            PieChart pie = new PieChart();
+            pie.setTitle("🏫 Salles par Type"); pie.setPrefHeight(220);
+            pie.setStyle("-fx-background-color:transparent;");
+            salleDAO.countByType().forEach((k, v) -> pie.getData().add(new PieChart.Data(k + " (" + v + ")", v)));
             chartSallesContainer.getChildren().setAll(pie);
         }
         if (chartCoursContainer != null) {
             CategoryAxis xA = new CategoryAxis(); NumberAxis yA = new NumberAxis();
             xA.setLabel("Jour"); yA.setLabel("Cours");
-            BarChart<String,Number> bar = new BarChart<>(xA,yA);
-            bar.setTitle("📅 Cours par Jour"); bar.setLegendVisible(false); bar.setPrefHeight(220);
-            XYChart.Series<String,Number> series = new XYChart.Series<>();
-            coursDAO.countByJour().forEach((k,v) -> series.getData().add(new XYChart.Data<>(k,v)));
-            bar.getData().add(series);
+            BarChart<String, Number> bar = new BarChart<>(xA, yA);
+            bar.setTitle("📅 Cours par Jour");
+            bar.setLegendVisible(false); bar.setPrefHeight(260);
+            bar.setStyle("-fx-background-color:transparent;");
+            XYChart.Series<String, Number> s = new XYChart.Series<>();
+            coursDAO.countByJour().forEach((k, v) -> s.getData().add(new XYChart.Data<>(k, v)));
+            bar.getData().add(s);
+            bar.getData().get(0).getData().forEach(d -> {
+                if (d.getNode() != null)
+                    d.getNode().setStyle("-fx-bar-fill:" + T_LIGHT + ";-fx-background-radius:6 6 2 2;");
+            });
             chartCoursContainer.getChildren().setAll(bar);
         }
     }
 
-    // === User CRUD ===
+    // ════════════════════════════════════════════════════════════════
+    //  CRUD Utilisateurs
+    // ════════════════════════════════════════════════════════════════
+
     @FXML private void handleSaveUser() {
-        String nom=nomField.getText().trim(), prenom=prenomField.getText().trim();
-        String email=emailField.getText().trim(), password=passwordField.getText().trim();
-        String role=roleCombo.getValue();
-        if(nom.isEmpty()||prenom.isEmpty()||email.isEmpty()||password.isEmpty()||role==null){
-            showError("Erreur","Tous les champs sont obligatoires."); return;
+        String nom = nomField.getText().trim(), prenom = prenomField.getText().trim();
+        String email = emailField.getText().trim(), password = passwordField.getText().trim();
+        String role = roleCombo.getValue();
+        if (nom.isEmpty() || prenom.isEmpty() || email.isEmpty() || password.isEmpty() || role == null) {
+            showError("Erreur", "Tous les champs sont obligatoires."); return;
         }
-        Utilisateur u;
-        switch(role){
-            case "ADMIN": u=new Administrateur(); break;
-            case "GESTIONNAIRE": u=new Gestionnaire(); break;
-            case "ENSEIGNANT": u=new Enseignant(); break;
-            default: u=new Etudiant(); break;
-        }
-        if(selectedUser!=null) u.setId(selectedUser.getId());
-        u.setNom(nom);u.setPrenom(prenom);u.setEmail(email);u.setMotDePasse(password);u.setRole(role);
+        Utilisateur u = switch (role) {
+            case "ADMIN"        -> new Administrateur();
+            case "GESTIONNAIRE" -> new Gestionnaire();
+            case "ENSEIGNANT"   -> new Enseignant();
+            default             -> new Etudiant();
+        };
+        if (selectedUser != null) u.setId(selectedUser.getId());
+        u.setNom(nom); u.setPrenom(prenom); u.setEmail(email);
+        u.setMotDePasse(password); u.setRole(role);
         utilisateurDAO.save(u); loadAll(); buildCharts(); clearUserForm();
-        showInfo("Succès","Utilisateur sauvegardé.");
+        showInfo("Succès", "Utilisateur sauvegardé.");
     }
     @FXML private void handleDeleteUser() {
-        if(selectedUser==null){ showError("Erreur","Sélectionnez un utilisateur."); return; }
-        if(selectedUser.getId()==currentUser.getId()){ showError("Erreur","Impossible de se supprimer."); return; }
-        if(confirmDelete(selectedUser.getNomComplet())){ utilisateurDAO.delete(selectedUser.getId()); loadAll(); buildCharts(); clearUserForm(); }
+        if (selectedUser == null) { showError("Erreur", "Sélectionnez un utilisateur."); return; }
+        if (selectedUser.getId() == currentUser.getId()) {
+            showError("Erreur", "Impossible de supprimer votre propre compte."); return;
+        }
+        if (confirmDelete(selectedUser.getNomComplet())) {
+            utilisateurDAO.delete(selectedUser.getId()); loadAll(); buildCharts(); clearUserForm();
+        }
     }
     @FXML private void handleClearUser() { clearUserForm(); }
     private void fillUserForm(Utilisateur u) {
@@ -204,99 +453,135 @@ public class AdminDashboardController extends BaseController {
     }
     private void clearUserForm() {
         nomField.clear(); prenomField.clear(); emailField.clear(); passwordField.clear();
-        roleCombo.setValue(null); selectedUser=null; userFormTitle.setText("Nouvel Utilisateur");
+        roleCombo.setValue(null); selectedUser = null;
+        userFormTitle.setText("Nouvel Utilisateur");
         userTable.getSelectionModel().clearSelection();
     }
 
-    // === Salle CRUD ===
+    // ════════════════════════════════════════════════════════════════
+    //  CRUD Salles
+    // ════════════════════════════════════════════════════════════════
+
     @FXML private void handleSaveSalle() {
-        String num=salleNumField.getText().trim();
-        if(num.isEmpty()||salleTypeCombo.getValue()==null||salleBatCombo.getValue()==null){
-            showError("Erreur","Numéro, type et bâtiment obligatoires."); return;
+        String num = salleNumField.getText().trim();
+        if (num.isEmpty() || salleTypeCombo.getValue() == null || salleBatCombo.getValue() == null) {
+            showError("Erreur", "Numéro, type et bâtiment obligatoires."); return;
         }
-        int cap=30; try{ cap=Integer.parseInt(sallecapField.getText().trim()); }catch(Exception e){}
-        Salle s=selectedSalle!=null?selectedSalle:new Salle();
-        s.setNumero(num); s.setCapacite(cap); s.setTypeSalle(salleTypeCombo.getValue());
-        s.setBatimentId(salleBatCombo.getValue().getId()); s.setDisponible(salleDispoCheck.isSelected());
+        int cap = 30;
+        try { cap = Integer.parseInt(salleCapField.getText().trim()); }
+        catch (NumberFormatException ex) { System.err.println("Capacité invalide, valeur par défaut 30"); }
+        Salle s = selectedSalle != null ? selectedSalle : new Salle();
+        s.setNumero(num); s.setCapacite(cap);
+        s.setTypeSalle(salleTypeCombo.getValue());
+        s.setBatimentId(salleBatCombo.getValue().getId());
+        s.setDisponible(salleDispoCheck.isSelected());
         salleDAO.save(s); loadAll(); buildCharts(); clearSalleForm();
-        showInfo("Succès","Salle sauvegardée.");
+        showInfo("Succès", "Salle sauvegardée.");
     }
     @FXML private void handleDeleteSalle() {
-        if(selectedSalle==null){ showError("Erreur","Sélectionnez une salle."); return; }
-        if(confirmDelete("la salle "+selectedSalle.getNumero())){ salleDAO.delete(selectedSalle.getId()); loadAll(); buildCharts(); clearSalleForm(); }
+        if (selectedSalle == null) { showError("Erreur", "Sélectionnez une salle."); return; }
+        if (confirmDelete("la salle " + selectedSalle.getNumero())) {
+            salleDAO.delete(selectedSalle.getId()); loadAll(); buildCharts(); clearSalleForm();
+        }
     }
     @FXML private void handleClearSalle() { clearSalleForm(); }
     private void fillSalleForm(Salle s) {
-        salleNumField.setText(s.getNumero()); sallecapField.setText(String.valueOf(s.getCapacite()));
+        salleNumField.setText(s.getNumero()); salleCapField.setText(String.valueOf(s.getCapacite()));
         salleTypeCombo.setValue(s.getTypeSalle()); salleDispoCheck.setSelected(s.isDisponible());
-        salleBatCombo.getItems().stream().filter(b->b.getId()==s.getBatimentId()).findFirst().ifPresent(salleBatCombo::setValue);
+        salleBatCombo.getItems().stream().filter(b -> b.getId() == s.getBatimentId())
+                .findFirst().ifPresent(salleBatCombo::setValue);
         salleFormTitle.setText("Modifier Salle");
     }
     private void clearSalleForm() {
-        salleNumField.clear(); sallecapField.clear(); salleTypeCombo.setValue(null);
-        salleBatCombo.setValue(null); salleDispoCheck.setSelected(true);
-        selectedSalle=null; salleFormTitle.setText("Nouvelle Salle");
+        salleNumField.clear(); salleCapField.clear();
+        salleTypeCombo.setValue(null); salleBatCombo.setValue(null);
+        salleDispoCheck.setSelected(true); selectedSalle = null;
+        salleFormTitle.setText("Nouvelle Salle");
         salleTable.getSelectionModel().clearSelection();
     }
 
-    // === Bâtiment CRUD ===
+    // ════════════════════════════════════════════════════════════════
+    //  CRUD Bâtiments
+    // ════════════════════════════════════════════════════════════════
+
     @FXML private void handleSaveBat() {
-        String nom=batNomField.getText().trim(), loc=batLocField.getText().trim();
-        if(nom.isEmpty()){ showError("Erreur","Nom obligatoire."); return; }
-        int etages=1; try{ etages=Integer.parseInt(batEtagesField.getText().trim()); }catch(Exception e){}
-        Batiment b=selectedBat!=null?selectedBat:new Batiment();
+        String nom = batNomField.getText().trim(), loc = batLocField.getText().trim();
+        if (nom.isEmpty()) { showError("Erreur", "Nom obligatoire."); return; }
+        int etages = 1;
+        try { etages = Integer.parseInt(batEtagesField.getText().trim()); }
+        catch (NumberFormatException ex) { System.err.println("Nombre d'étages invalide, valeur par défaut 1"); }
+        Batiment b = selectedBat != null ? selectedBat : new Batiment();
         b.setNom(nom); b.setLocalisation(loc); b.setNombreEtages(etages);
         batimentDAO.save(b); loadAll(); clearBatForm();
-        showInfo("Succès","Bâtiment sauvegardé.");
+        showInfo("Succès", "Bâtiment sauvegardé.");
     }
     @FXML private void handleDeleteBat() {
-        if(selectedBat==null){ showError("Erreur","Sélectionnez un bâtiment."); return; }
-        if(confirmDelete(selectedBat.getNom())){ batimentDAO.delete(selectedBat.getId()); loadAll(); clearBatForm(); }
+        if (selectedBat == null) { showError("Erreur", "Sélectionnez un bâtiment."); return; }
+        if (confirmDelete(selectedBat.getNom())) {
+            batimentDAO.delete(selectedBat.getId()); loadAll(); clearBatForm();
+        }
     }
     @FXML private void handleClearBat() { clearBatForm(); }
     private void fillBatForm(Batiment b) {
         batNomField.setText(b.getNom()); batLocField.setText(b.getLocalisation());
-        batEtagesField.setText(String.valueOf(b.getNombreEtages())); batFormTitle.setText("Modifier Bâtiment");
+        batEtagesField.setText(String.valueOf(b.getNombreEtages()));
+        batFormTitle.setText("Modifier Bâtiment");
     }
     private void clearBatForm() {
         batNomField.clear(); batLocField.clear(); batEtagesField.clear();
-        selectedBat=null; batFormTitle.setText("Nouveau Bâtiment");
+        selectedBat = null; batFormTitle.setText("Nouveau Bâtiment");
         batTable.getSelectionModel().clearSelection();
     }
 
-    // === Equipement CRUD ===
+    // ════════════════════════════════════════════════════════════════
+    //  CRUD Equipements
+    // ════════════════════════════════════════════════════════════════
+
     @FXML private void handleSaveEquip() {
-        String nom=equipNomField.getText().trim();
-        if(nom.isEmpty()||equipTypeCombo.getValue()==null||equipSalleCombo.getValue()==null){
-            showError("Erreur","Nom, type et salle obligatoires."); return;
+        String nom = equipNomField.getText().trim();
+        if (nom.isEmpty() || equipTypeCombo.getValue() == null || equipSalleCombo.getValue() == null) {
+            showError("Erreur", "Nom, type et salle obligatoires."); return;
         }
-        Equipement e=selectedEquip!=null?selectedEquip:new Equipement();
+        Equipement e = selectedEquip != null ? selectedEquip : new Equipement();
         e.setNom(nom); e.setDescription(equipDescField.getText().trim());
         e.setTypeEquipement(equipTypeCombo.getValue());
-        e.setEtat(equipEtatCombo.getValue()!=null?equipEtatCombo.getValue():"BON");
-        e.setSalleId(equipSalleCombo.getValue().getId()); e.setDisponible(equipDispoCheck.isSelected());
+        e.setEtat(equipEtatCombo.getValue() != null ? equipEtatCombo.getValue() : "BON");
+        e.setSalleId(equipSalleCombo.getValue().getId());
+        e.setDisponible(equipDispoCheck.isSelected());
         equipementDAO.save(e); loadAll(); clearEquipForm();
-        showInfo("Succès","Équipement sauvegardé.");
+        showInfo("Succès", "Equipement sauvegardé.");
     }
     @FXML private void handleDeleteEquip() {
-        if(selectedEquip==null){ showError("Erreur","Sélectionnez un équipement."); return; }
-        if(confirmDelete(selectedEquip.getNom())){ equipementDAO.delete(selectedEquip.getId()); loadAll(); clearEquipForm(); }
+        if (selectedEquip == null) { showError("Erreur", "Sélectionnez un équipement."); return; }
+        if (confirmDelete(selectedEquip.getNom())) {
+            equipementDAO.delete(selectedEquip.getId()); loadAll(); clearEquipForm();
+        }
     }
     @FXML private void handleClearEquip() { clearEquipForm(); }
     private void fillEquipForm(Equipement e) {
-        equipNomField.setText(e.getNom()); equipDescField.setText(e.getDescription()!=null?e.getDescription():"");
+        equipNomField.setText(e.getNom());
+        equipDescField.setText(e.getDescription() != null ? e.getDescription() : "");
         equipTypeCombo.setValue(e.getTypeEquipement()); equipEtatCombo.setValue(e.getEtat());
         equipDispoCheck.setSelected(e.isDisponible());
-        equipSalleCombo.getItems().stream().filter(s->s.getId()==e.getSalleId()).findFirst().ifPresent(equipSalleCombo::setValue);
-        equipFormTitle.setText("Modifier Équipement");
+        equipSalleCombo.getItems().stream().filter(s -> s.getId() == e.getSalleId())
+                .findFirst().ifPresent(equipSalleCombo::setValue);
+        equipFormTitle.setText("Modifier Equipement");
     }
     private void clearEquipForm() {
-        equipNomField.clear(); equipDescField.clear(); equipTypeCombo.setValue(null);
-        equipEtatCombo.setValue(null); equipSalleCombo.setValue(null); equipDispoCheck.setSelected(true);
-        selectedEquip=null; equipFormTitle.setText("Nouvel Équipement");
+        equipNomField.clear(); equipDescField.clear();
+        equipTypeCombo.setValue(null); equipEtatCombo.setValue(null);
+        equipSalleCombo.setValue(null); equipDispoCheck.setSelected(true);
+        selectedEquip = null; equipFormTitle.setText("Nouvel Equipement");
         equipTable.getSelectionModel().clearSelection();
     }
 
+    // ─────────────────────────────────────────────────────────────────
     @FXML private void handleRefresh() { loadAll(); buildCharts(); }
     @FXML private void handleLogout()  { logout(); }
+
+    /** Ouvre le chatbot UNIV-SCHEDULER */
+    @FXML
+    protected void openChatbot() {
+        AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet());
+    }
 }
