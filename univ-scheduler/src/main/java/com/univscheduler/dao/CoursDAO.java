@@ -89,11 +89,29 @@ public class CoursDAO {
         return m;
     }
 
+    /**
+     * Comptage global de tous les cours par statut (utilisé par l'admin/gestionnaire).
+     */
     public Map<String, Integer> countByStatut() {
         Map<String, Integer> m = new LinkedHashMap<>();
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             ResultSet rs = stmt.executeQuery(
                     "SELECT statut, COUNT(*) as cnt FROM cours GROUP BY statut");
+            while (rs.next()) m.put(rs.getString("statut"), rs.getInt("cnt"));
+        } catch (SQLException e) { e.printStackTrace(); }
+        return m;
+    }
+
+    /**
+     * ✅ NOUVEAU : Comptage des cours d'un enseignant spécifique par statut.
+     * Utilisé par le graphe camembert du tableau de bord enseignant.
+     */
+    public Map<String, Integer> countByStatutForEnseignant(int enseignantId) {
+        Map<String, Integer> m = new LinkedHashMap<>();
+        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
+                "SELECT statut, COUNT(*) as cnt FROM cours WHERE enseignant_id=? GROUP BY statut")) {
+            ps.setInt(1, enseignantId);
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) m.put(rs.getString("statut"), rs.getInt("cnt"));
         } catch (SQLException e) { e.printStackTrace(); }
         return m;
@@ -121,13 +139,11 @@ public class CoursDAO {
         return false;
     }
 
-    // ✅ MODIFIÉ : statut "PLANIFIE" par défaut à la création
+    // Statut PLANIFIE par défaut à la création
     public void save(Cours c) {
-        // Statut PLANIFIE par défaut si non défini
         if (c.getStatut() == null || c.getStatut().isEmpty()) {
             c.setStatut("PLANIFIE");
         }
-
         if (c.getId() == 0) {
             try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO cours(statut,date,matiere_id,enseignant_id,classe_id,creneau_id,salle_id) " +
@@ -155,7 +171,7 @@ public class CoursDAO {
         }
     }
 
-    // ✅ NOUVEAU : mise à jour uniquement du statut (appelé par l'enseignant)
+    // Mise à jour uniquement du statut
     public void updateStatut(int coursId, String nouveauStatut) {
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
                 "UPDATE cours SET statut=? WHERE id=?")) {

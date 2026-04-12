@@ -9,7 +9,16 @@
             <Label text="🎓 UNIV-SCHEDULER" styleClass="nav-logo"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="Enseignant" styleClass="nav-role-badge-orange"/>
-            <Label fx:id="notifBadge" text="🔔" styleClass="nav-user"/>
+
+            <!-- ✅ MODIFIÉ : notifBadge devient un Button cliquable -->
+            <Button fx:id="notifBadgeBtn"
+                    text="🔔 Aucune nouvelle"
+                    onAction="#handleOpenNotifications"
+                    style="-fx-background-color:transparent;-fx-text-fill:#64748b;
+                           -fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;
+                           -fx-background-radius:20;-fx-border-color:#e2e8f0;
+                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"/>
+
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
             <Button text="🤖 Assistant"
                     onAction="#openChatbot"
@@ -39,14 +48,13 @@
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Mes cours assignés" styleClass="section-title"/>
 
-                                <!-- ✅ CHIPS FILTRE PAR CLASSE -->
+                                <!-- CHIPS FILTRE PAR CLASSE -->
                                 <VBox spacing="6"
                                       style="-fx-padding:10 12;-fx-background-color:#f8fafc;
                                              -fx-background-radius:10;-fx-border-radius:10;
                                              -fx-border-color:#e2e8f0;-fx-border-width:1;">
                                     <Label text="🎓 Filtrer par classe"
                                            style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#475569;"/>
-                                    <!-- Le HBox des chips est généré dynamiquement depuis le controller -->
                                     <FlowPane fx:id="chipsContainer" hgap="8" vgap="6"
                                               style="-fx-padding:4 0 2 0;"/>
                                     <Label fx:id="filtreResultLabel" text=""
@@ -75,10 +83,10 @@
                                 </HBox>
                             </VBox>
 
-                            <!-- Graphique camembert -->
-                            <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
+                            <!-- ✅ MODIFIÉ : Graphique camembert — panel élargi pour les labels -->
+                            <VBox styleClass="form-panel" minWidth="280" maxWidth="280" spacing="8">
                                 <Label text="📊 Mes Cours par Statut" styleClass="form-title"/>
-                                <VBox fx:id="chartEnsContainer" minHeight="220"/>
+                                <VBox fx:id="chartEnsContainer" minHeight="260"/>
                             </VBox>
                         </HBox>
                     </Tab>

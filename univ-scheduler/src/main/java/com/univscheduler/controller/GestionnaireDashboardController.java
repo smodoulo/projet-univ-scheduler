@@ -28,16 +28,11 @@ import java.util.stream.Collectors;
 
 public class GestionnaireDashboardController extends BaseController {
 
-    // ── Labels KPI ───────────────────────────────────────────────
     @FXML private Label welcomeLabel, totalCoursLabel, conflitsLabel;
     @FXML private Label coursFormTitle, conflitLabel, salleAutoLabel;
     @FXML private Label notifBadge;
-
-    // ── Filtre classe ─────────────────────────────────────────────
     @FXML private ComboBox<String> filtreClasseCombo;
     @FXML private Label            filtreInfoLabel;
-
-    // ── Table cours ───────────────────────────────────────────────
     @FXML private TableView<Cours> coursTable;
     @FXML private TableColumn<Cours, String> colMat, colEns, colCls, colCren, colSalle, colDate, colStatut;
     @FXML private ComboBox<Matiere>      matiereCombo;
@@ -47,37 +42,20 @@ public class GestionnaireDashboardController extends BaseController {
     @FXML private ComboBox<Salle>        salleCombo;
     @FXML private DatePicker             datePicker;
     @FXML private ComboBox<String>       statutCombo;
-
-    // ── Réservations ──────────────────────────────────────────────
     @FXML private TableView<Reservation> reservTable;
     @FXML private TableColumn<Reservation, String> colResMotif, colResSalle, colResDate, colResStatut, colResUser;
-
-    // ── Calendrier ────────────────────────────────────────────────
     @FXML private GridPane calendarGrid;
     @FXML private Label    calendarWeekLabel;
     @FXML private Button   btnVueSemaine, btnVueMois;
-
-    // ── Rapport charts (existants) ────────────────────────────────
     @FXML private VBox chartCoursContainer, chartReservContainer, chartOccupationContainer;
     @FXML private TableView<Salle>            sallesCritiquesTable;
     @FXML private TableColumn<Salle, String>  colCritNum, colCritType, colCritTaux;
     @FXML private TableColumn<Salle, Integer> colCritCap;
     @FXML private TextArea rapportTextArea;
-
-    // ── ✅ 4 conteneurs cartes Dribbble (Tab Rapports) ─────────────
-    @FXML private VBox rapportGaugeContainer;   // Card 1 : jauge taux occupation
-    @FXML private VBox rapportSupplyContainer;  // Card 2 : cours par mois (barres groupées)
-    @FXML private VBox rapportTrendContainer;   // Card 3 : évolution semaines + IA
-    @FXML private VBox rapportHealthContainer;  // Card 4 : santé salles
-
-    // ── Carte salles ──────────────────────────────────────────────
+    @FXML private VBox rapportGaugeContainer, rapportSupplyContainer, rapportTrendContainer, rapportHealthContainer;
     @FXML private VBox carteContainer;
-
-    // ── Historique ────────────────────────────────────────────────
     @FXML private TableView<Reservation> historiqueTable;
     @FXML private TableColumn<Reservation, String> colHistUser, colHistMotif, colHistSalle, colHistDate, colHistStatut;
-
-    // ── Signalements ──────────────────────────────────────────────
     @FXML private TableView<Signalement>           signalTable;
     @FXML private TableColumn<Signalement, String> colSignTitre, colSignEns, colSignSalle,
             colSignCat, colSignPrio, colSignStatut, colSignDate;
@@ -101,13 +79,10 @@ public class GestionnaireDashboardController extends BaseController {
     private static final String MUTED    = "#9eb3bf";
     private static final String SECOND   = "#6b8394";
     private static final String BORDER   = "#d4ecf0";
+    private static final String S1 = "#1a5f6e";
+    private static final String S2 = "#4ecdc4";
+    private static final String S3 = "#3ecf8e";
 
-    // Couleurs barres groupées Supply (3 séries)
-    private static final String S1 = "#1a5f6e";   // Planifiés
-    private static final String S2 = "#4ecdc4";   // Réalisés
-    private static final String S3 = "#3ecf8e";   // Annulés
-
-    // ── DAO / Services ────────────────────────────────────────────
     private final CoursDAO        coursDAO       = new CoursDAO();
     private final MatiereDAO      matiereDAO     = new MatiereDAO();
     private final UtilisateurDAO  utilisateurDAO = new UtilisateurDAO();
@@ -130,35 +105,25 @@ public class GestionnaireDashboardController extends BaseController {
     private Cours       selectedCours  = null;
     private Reservation selectedReserv = null;
     private Signalement selectedSignal = null;
-
     private LocalDate calendarWeekStart = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
     private YearMonth calendarMonth     = YearMonth.now();
     private boolean   vueMoisActive     = false;
 
-    // ════════════════════════════════════════════════════════════════
     @Override
     protected void onUserLoaded() {
         welcomeLabel.setText("Bonjour, " + currentUser.getNomComplet());
         setupCoursTable(); setupReservTable(); setupHistoriqueTable();
         setupCritiquesTable(); setupSignalTable(); setupFiltreClasse();
-
         matiereCombo.setItems(FXCollections.observableArrayList(matiereDAO.findAll()));
         enseignantCombo.setItems(FXCollections.observableArrayList(utilisateurDAO.findAllEnseignants()));
         classeCombo.setItems(FXCollections.observableArrayList(classeDAO.findAll()));
         creneauCombo.setItems(FXCollections.observableArrayList(creneauDAO.findAll()));
         salleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
         statutCombo.setItems(FXCollections.observableArrayList("PLANIFIE","EN_COURS","TERMINE","ANNULE"));
-
         if (conflitLabel  != null) { conflitLabel.setVisible(false); conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"); }
         if (salleAutoLabel != null) salleAutoLabel.setVisible(false);
-
         styleBoutonVue(false);
-        loadData();
-        buildRapportDashboard(); // ← 4 cartes Dribbble
-        buildCharts();           // ← charts classiques (occupation, cours/jour, statut)
-        buildCalendar();
-        buildCarteSalles();
-
+        loadData(); buildRapportDashboard(); buildCharts(); buildCalendar(); buildCarteSalles();
         salleCombo.setOnAction(e      -> checkConflict());
         enseignantCombo.setOnAction(e -> checkConflict());
         classeCombo.setOnAction(e  -> { checkConflict(); assignerSalleAutomatique(); });
@@ -167,133 +132,96 @@ public class GestionnaireDashboardController extends BaseController {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  ✅ 4 CARTES RAPPORT — style Dribbble (Image 1)
+    //  4 CARTES RAPPORT
     // ════════════════════════════════════════════════════════════════
 
-    /** Reconstruit les 4 cartes du tableau de bord rapports */
     private void buildRapportDashboard() {
-        buildCardGauge();
-        buildCardSupply();
-        buildCardTrend();
-        buildCardHealth();
+        buildCardGauge(); buildCardSupply(); buildCardTrend(); buildCardHealth();
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CARD 1 — "Supplier on Time Delivery" → Taux d'Occupation Moyen
-    // ─────────────────────────────────────────────────────────────────
     private void buildCardGauge() {
         if (rapportGaugeContainer == null) return;
         rapportGaugeContainer.getChildren().clear();
         rapportGaugeContainer.setSpacing(12);
         rapportGaugeContainer.setPadding(new Insets(20));
-
-        // En-tête
-        rapportGaugeContainer.getChildren().add(cardHeader(
-                "Taux d'Occupation Moyen", "Toutes salles confondues"));
+        rapportGaugeContainer.getChildren().add(cardHeader("Taux d'Occupation Moyen", "Toutes salles confondues"));
 
         double taux   = rapportService.getTauxOccupationGlobal();
         long   totSal = salleDAO.findAll().size();
 
-        // ── Arc jauge — Pane avec coordonnées absolues ────────────
-        // (StackPane mal centré car layoutBounds de Arc ≠ prefSize)
         final double CX = 100, CY = 100, R = 68;
         Pane gaugePane = new Pane();
-        gaugePane.setPrefSize(200, 185);
-        gaugePane.setMaxSize(200, 185);
+        gaugePane.setPrefSize(200, 185); gaugePane.setMaxSize(200, 185);
 
-        // Arc fond (gris très pâle — 270° complets)
         Arc bgArc = new Arc(CX, CY, R, R, 225, -270);
-        bgArc.setType(ArcType.OPEN);
-        bgArc.setFill(Color.TRANSPARENT);
-        bgArc.setStroke(Color.web("#d8f0f4"));
-        bgArc.setStrokeWidth(18);
+        bgArc.setType(ArcType.OPEN); bgArc.setFill(Color.TRANSPARENT);
+        bgArc.setStroke(Color.web("#d8f0f4")); bgArc.setStrokeWidth(18);
         bgArc.setStrokeLineCap(StrokeLineCap.ROUND);
 
-        // Arc teal-mid — proportionnel à la valeur réelle
         double angle = (taux / 100.0) * 270.0;
         Arc fillArc = new Arc(CX, CY, R, R, 225, -angle);
-        fillArc.setType(ArcType.OPEN);
-        fillArc.setFill(Color.TRANSPARENT);
-        fillArc.setStroke(Color.web(T_MID));
-        fillArc.setStrokeWidth(18);
+        fillArc.setType(ArcType.OPEN); fillArc.setFill(Color.TRANSPARENT);
+        fillArc.setStroke(Color.web(T_MID)); fillArc.setStrokeWidth(18);
         fillArc.setStrokeLineCap(StrokeLineCap.ROUND);
 
-        // Valeur centrale positionnée en absolu au centre du cercle
         Label valLbl = new Label(String.format("%.0f", taux));
         valLbl.setStyle("-fx-font-size:38px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         Label pctLbl = new Label("%");
         pctLbl.setStyle("-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
-        // HBox centré — on le repositionne après layout
         HBox valRow = new HBox(2, valLbl, pctLbl);
         valRow.setAlignment(Pos.BOTTOM_CENTER);
-        // Pre-positionner approximativement (JavaFX ajuste au layout)
-        valRow.setLayoutX(CX - 42);
-        valRow.setLayoutY(CY - 24);
-        // Centrage précis après rendu
+        valRow.setLayoutX(CX - 42); valRow.setLayoutY(CY - 24);
         valRow.layoutBoundsProperty().addListener((obs, old, nb) -> {
             valRow.setLayoutX(CX - nb.getWidth()  / 2.0);
             valRow.setLayoutY(CY - nb.getHeight() / 2.0);
         });
-
         gaugePane.getChildren().addAll(bgArc, fillArc, valRow);
 
-        HBox gaugeWrap = new HBox(gaugePane);
-        gaugeWrap.setAlignment(Pos.CENTER);
+        HBox gaugeWrap = new HBox(gaugePane); gaugeWrap.setAlignment(Pos.CENTER);
         rapportGaugeContainer.getChildren().add(gaugeWrap);
 
-        // ── Pills Tendance / Objectif ─────────────────────────────
-        HBox pills = new HBox(10);
-        pills.setAlignment(Pos.CENTER);
-        pills.getChildren().addAll(
-                pill("↓ Tendance",    RED_BG,  RED),
-                pill("Objectif: 60%", GOLD_BG, GOLD)
-        );
+        HBox pills = new HBox(10); pills.setAlignment(Pos.CENTER);
+        pills.getChildren().addAll(pill("↓ Tendance", RED_BG, RED), pill("Objectif: 60%", GOLD_BG, GOLD));
         rapportGaugeContainer.getChildren().add(pills);
 
-        // ── 3 mini-stats ──────────────────────────────────────────
-        HBox mini = new HBox(20);
-        mini.setAlignment(Pos.CENTER);
+        // ✅ CORRECTION : countLibresAujourdhui() au lieu de countDisponibles()
+        // countDisponibles() = flag maintenance (toujours 40 même si cours planifiés)
+        // countLibresAujourdhui() = réellement libres aujourd'hui (sans cours planifié/en cours)
+        long sallesLibresAujourdhui = salleDAO.countLibresAujourdhui();
+
+        HBox mini = new HBox(20); mini.setAlignment(Pos.CENTER);
         mini.setPadding(new Insets(8, 0, 0, 0));
         mini.getChildren().addAll(
-                miniStat(String.valueOf(totSal),                       "Total salles",  T_MID),
-                miniStat(String.valueOf(critList.size()),               "Critiques",     RED),
-                miniStat(String.valueOf(salleDAO.countDisponibles()),   "Disponibles",   GREEN)
+                miniStat(String.valueOf(totSal),               "Total salles", T_MID),
+                miniStat(String.valueOf(critList.size()),      "Critiques",    RED),
+                miniStat(String.valueOf(sallesLibresAujourdhui),"Libres auj.", GREEN)
         );
         rapportGaugeContainer.getChildren().add(mini);
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CARD 2 — "Supply 7842" → Cours par Mois (barres groupées 3 couleurs)
-    // ─────────────────────────────────────────────────────────────────
     private void buildCardSupply() {
         if (rapportSupplyContainer == null) return;
         rapportSupplyContainer.getChildren().clear();
         rapportSupplyContainer.setSpacing(10);
         rapportSupplyContainer.setPadding(new Insets(20));
 
-        // Header avec total en grand
         HBox topRow = new HBox(); topRow.setAlignment(Pos.CENTER_LEFT);
         VBox titleBox = new VBox(2);
-        Label tit = new Label("Cours par Mois");
-        tit.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
-        Label sub = new Label("Planifiés · Réalisés · Annulés");
-        sub.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
+        Label tit = new Label("Cours par Mois"); tit.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label sub = new Label("Planifiés · Réalisés · Annulés"); sub.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
         titleBox.getChildren().addAll(tit, sub);
         Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
-        Label totLbl = new Label(String.valueOf(coursList.size()));
-        totLbl.setStyle("-fx-font-size:28px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label totLbl = new Label(String.valueOf(coursList.size())); totLbl.setStyle("-fx-font-size:28px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         topRow.getChildren().addAll(titleBox, esp, totLbl);
         rapportSupplyContainer.getChildren().add(topRow);
 
-        // Données 6 derniers mois
         String[] moisLbls = derniersMois(6);
         int[] planifArr = new int[6], realisArr = new int[6], annulArr = new int[6];
         for (Cours c : coursList) {
             if (c.getDate() == null) continue;
             for (int i = 0; i < 6; i++) {
                 YearMonth ym = YearMonth.now().minusMonths(5 - i);
-                if (c.getDate().getYear() == ym.getYear()
-                        && c.getDate().getMonthValue() == ym.getMonthValue()) {
+                if (c.getDate().getYear() == ym.getYear() && c.getDate().getMonthValue() == ym.getMonthValue()) {
                     String s = c.getStatut() != null ? c.getStatut() : "";
                     if ("PLANIFIE".equalsIgnoreCase(s) || "EN_COURS".equalsIgnoreCase(s)) planifArr[i]++;
                     else if ("TERMINE".equalsIgnoreCase(s) || "REALISE".equalsIgnoreCase(s)) realisArr[i]++;
@@ -303,54 +231,32 @@ public class GestionnaireDashboardController extends BaseController {
             }
         }
         int maxVal = 1;
-        for (int i = 0; i < 6; i++)
-            maxVal = Math.max(maxVal, planifArr[i] + realisArr[i] + annulArr[i]);
+        for (int i = 0; i < 6; i++) maxVal = Math.max(maxVal, planifArr[i] + realisArr[i] + annulArr[i]);
 
-        // ── Barres groupées ───────────────────────────────────────
         HBox barsRow = new HBox(8); barsRow.setAlignment(Pos.BOTTOM_LEFT);
         barsRow.setPrefHeight(140); barsRow.setMaxHeight(140);
         for (int i = 0; i < 6; i++) {
-            VBox group = new VBox(3); group.setAlignment(Pos.BOTTOM_CENTER);
-            HBox.setHgrow(group, Priority.ALWAYS);
+            VBox group = new VBox(3); group.setAlignment(Pos.BOTTOM_CENTER); HBox.setHgrow(group, Priority.ALWAYS);
             HBox bars = new HBox(2); bars.setAlignment(Pos.BOTTOM_CENTER);
             double scale = 110.0 / maxVal;
-            bars.getChildren().addAll(
-                    barreSingle(planifArr[i], scale, S1, 9),
-                    barreSingle(realisArr[i], scale, S2, 9),
-                    barreSingle(annulArr[i],  scale, S3, 9)
-            );
-            Label ml = new Label(moisLbls[i]);
-            ml.setStyle("-fx-font-size:9px;-fx-text-fill:"+MUTED+";-fx-font-weight:bold;");
-            group.getChildren().addAll(bars, ml);
-            barsRow.getChildren().add(group);
+            bars.getChildren().addAll(barreSingle(planifArr[i], scale, S1, 9), barreSingle(realisArr[i], scale, S2, 9), barreSingle(annulArr[i], scale, S3, 9));
+            Label ml = new Label(moisLbls[i]); ml.setStyle("-fx-font-size:9px;-fx-text-fill:"+MUTED+";-fx-font-weight:bold;");
+            group.getChildren().addAll(bars, ml); barsRow.getChildren().add(group);
         }
         rapportSupplyContainer.getChildren().add(barsRow);
 
-        // ── Barre légende colorée (3 couleurs — comme l'image) ────
         HBox legendBar = new HBox(0); legendBar.setPrefHeight(8);
-        Region lb1 = new Region(); HBox.setHgrow(lb1, Priority.ALWAYS);
-        lb1.setStyle("-fx-background-color:"+S1+";-fx-background-radius:4 0 0 4;");
-        Region lb2 = new Region(); HBox.setHgrow(lb2, Priority.ALWAYS);
-        lb2.setStyle("-fx-background-color:"+S2+";");
-        Region lb3 = new Region(); HBox.setHgrow(lb3, Priority.ALWAYS);
-        lb3.setStyle("-fx-background-color:"+S3+";-fx-background-radius:0 4 4 0;");
+        Region lb1 = new Region(); HBox.setHgrow(lb1, Priority.ALWAYS); lb1.setStyle("-fx-background-color:"+S1+";-fx-background-radius:4 0 0 4;");
+        Region lb2 = new Region(); HBox.setHgrow(lb2, Priority.ALWAYS); lb2.setStyle("-fx-background-color:"+S2+";");
+        Region lb3 = new Region(); HBox.setHgrow(lb3, Priority.ALWAYS); lb3.setStyle("-fx-background-color:"+S3+";-fx-background-radius:0 4 4 0;");
         legendBar.getChildren().addAll(lb1, lb2, lb3);
         rapportSupplyContainer.getChildren().add(legendBar);
 
-        // ── Légende points ────────────────────────────────────────
-        HBox legend = new HBox(16); legend.setAlignment(Pos.CENTER_LEFT);
-        legend.setPadding(new Insets(4, 0, 0, 0));
-        legend.getChildren().addAll(
-                legendDot(S1, "Planifiés"),
-                legendDot(S2, "Réalisés"),
-                legendDot(S3, "Annulés")
-        );
+        HBox legend = new HBox(16); legend.setAlignment(Pos.CENTER_LEFT); legend.setPadding(new Insets(4, 0, 0, 0));
+        legend.getChildren().addAll(legendDot(S1,"Planifiés"), legendDot(S2,"Réalisés"), legendDot(S3,"Annulés"));
         rapportSupplyContainer.getChildren().add(legend);
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CARD 3 — "Previous 38% / Current 82%" → Évolution hebdomadaire
-    // ─────────────────────────────────────────────────────────────────
     private void buildCardTrend() {
         if (rapportTrendContainer == null) return;
         rapportTrendContainer.getChildren().clear();
@@ -358,114 +264,77 @@ public class GestionnaireDashboardController extends BaseController {
         rapportTrendContainer.setPadding(new Insets(20));
 
         double[] rates = computeWeekRates(6);
-        double prev    = rates.length >= 2 ? rates[rates.length - 2] : 38;
+        double prev = rates.length >= 2 ? rates[rates.length - 2] : 38;
         double current = rates.length >= 1 ? rates[rates.length - 1] : 82;
         boolean hausse = current >= prev;
 
-        // ── Header Previous / Current ─────────────────────────────
         HBox header = new HBox(24); header.setAlignment(Pos.CENTER_LEFT);
         VBox prevBox = new VBox(2);
-        Label prevLbl = new Label("Précédent");
-        prevLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:"+SECOND+";");
-        Label prevVal = new Label(String.format("%.0f%%", prev));
-        prevVal.setStyle("-fx-font-size:26px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label prevLbl = new Label("Précédent"); prevLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:"+SECOND+";");
+        Label prevVal = new Label(String.format("%.0f%%", prev)); prevVal.setStyle("-fx-font-size:26px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         prevBox.getChildren().addAll(prevLbl, prevVal);
-
         VBox currBox = new VBox(2);
-        Label currLbl = new Label("Actuel");
-        currLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:"+SECOND+";");
-        Label currVal = new Label(String.format("%.0f%%", current));
-        currVal.setStyle("-fx-font-size:26px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label currLbl = new Label("Actuel"); currLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:"+SECOND+";");
+        Label currVal = new Label(String.format("%.0f%%", current)); currVal.setStyle("-fx-font-size:26px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         currBox.getChildren().addAll(currLbl, currVal);
-
         Region espH = new Region(); HBox.setHgrow(espH, Priority.ALWAYS);
-        // Indicateur vertical (or = hausse, rouge = baisse) — comme l'image
         Region indic = new Region(); indic.setPrefSize(4, 44);
         indic.setStyle("-fx-background-color:"+(hausse?GOLD:RED)+";-fx-background-radius:4;");
         header.getChildren().addAll(prevBox, currBox, espH, indic);
         rapportTrendContainer.getChildren().add(header);
 
-        // ── Barres semaines ───────────────────────────────────────
         double maxRate = 1;
         for (double r : rates) maxRate = Math.max(maxRate, r);
-
-        HBox barsRow = new HBox(6); barsRow.setAlignment(Pos.BOTTOM_LEFT);
-        barsRow.setPrefHeight(110);
+        HBox barsRow = new HBox(6); barsRow.setAlignment(Pos.BOTTOM_LEFT); barsRow.setPrefHeight(110);
         String[] semLbls = {"S-5","S-4","S-3","S-2","S-1","Cette sem."};
         int offset = semLbls.length - rates.length;
-
         for (int i = 0; i < rates.length; i++) {
             boolean isCurrent = (i == rates.length - 1);
             double h = maxRate > 0 ? (rates[i] / maxRate) * 88 : 8;
-            VBox col = new VBox(3); col.setAlignment(Pos.BOTTOM_CENTER);
-            HBox.setHgrow(col, Priority.ALWAYS);
-
-            Rectangle rect = new Rectangle();
-            rect.setWidth(22); rect.setHeight(Math.max(8, h));
+            VBox col = new VBox(3); col.setAlignment(Pos.BOTTOM_CENTER); HBox.setHgrow(col, Priority.ALWAYS);
+            Rectangle rect = new Rectangle(); rect.setWidth(22); rect.setHeight(Math.max(8, h));
             rect.setArcWidth(6); rect.setArcHeight(6);
             rect.setFill(isCurrent ? Color.web(T_MID) : Color.web(T_MID, 0.22));
-
-            Label lbl = new Label(semLbls[offset + i]);
-            lbl.setStyle("-fx-font-size:9px;-fx-text-fill:"+MUTED+";-fx-font-weight:bold;");
-            col.getChildren().addAll(rect, lbl);
-            barsRow.getChildren().add(col);
+            Label lbl = new Label(semLbls[offset + i]); lbl.setStyle("-fx-font-size:9px;-fx-text-fill:"+MUTED+";-fx-font-weight:bold;");
+            col.getChildren().addAll(rect, lbl); barsRow.getChildren().add(col);
         }
         rapportTrendContainer.getChildren().add(barsRow);
 
-        // ── Bloc IA — exactement comme "AI Forecast" de l'image ──
-        HBox aiBox = new HBox(10); aiBox.setAlignment(Pos.CENTER_LEFT);
-        aiBox.setPadding(new Insets(10, 12, 10, 12));
-        aiBox.setStyle(
-                "-fx-background-color:linear-gradient(135deg,rgba(78,205,196,0.08),rgba(0,184,217,0.05));" +
-                        "-fx-border-color:rgba(78,205,196,0.20);-fx-border-radius:10;-fx-border-width:1;" +
-                        "-fx-background-radius:10;");
-
-        // Icône IA (gradient teal — comme la hexagone violette de l'image)
+        HBox aiBox = new HBox(10); aiBox.setAlignment(Pos.CENTER_LEFT); aiBox.setPadding(new Insets(10, 12, 10, 12));
+        aiBox.setStyle("-fx-background-color:linear-gradient(135deg,rgba(78,205,196,0.08),rgba(0,184,217,0.05));-fx-border-color:rgba(78,205,196,0.20);-fx-border-radius:10;-fx-border-width:1;-fx-background-radius:10;");
         StackPane aiIco = new StackPane(); aiIco.setPrefSize(36, 36); aiIco.setMinSize(36, 36);
         aiIco.setStyle("-fx-background-color:linear-gradient(135deg,"+T_LIGHT+",#00b8d9);-fx-background-radius:10;");
         Label emojiBot = new Label("🤖"); emojiBot.setStyle("-fx-font-size:16px;");
         aiIco.getChildren().add(emojiBot);
-
         VBox aiTexts = new VBox(3); HBox.setHgrow(aiTexts, Priority.ALWAYS);
         HBox aiTitle = new HBox(5); aiTitle.setAlignment(Pos.CENTER_LEFT);
-        Label aiArrow = new Label(hausse?"↑":"↓");
-        aiArrow.setStyle("-fx-text-fill:"+(hausse?GREEN:RED)+";-fx-font-size:14px;-fx-font-weight:bold;");
-        Label aiLbl = new Label("Analyse IA");
-        aiLbl.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label aiArrow = new Label(hausse?"↑":"↓"); aiArrow.setStyle("-fx-text-fill:"+(hausse?GREEN:RED)+";-fx-font-size:14px;-fx-font-weight:bold;");
+        Label aiLbl = new Label("Analyse IA"); aiLbl.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         aiTitle.getChildren().addAll(aiArrow, aiLbl);
-
         String salleCrit = critList.isEmpty() ? "B03-TD" : critList.get(0).getNumero();
         String jourMax   = getJourPlusCharge();
-        Label aiMsg = new Label("La salle " + salleCrit + " affiche le taux le plus élevé. "
-                + jourMax + " est le jour le plus chargé.");
-        aiMsg.setWrapText(true);
-        aiMsg.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
+        Label aiMsg = new Label("La salle " + salleCrit + " affiche le taux le plus élevé. " + jourMax + " est le jour le plus chargé.");
+        aiMsg.setWrapText(true); aiMsg.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
         aiTexts.getChildren().addAll(aiTitle, aiMsg);
-
         aiBox.getChildren().addAll(aiIco, aiTexts);
         rapportTrendContainer.getChildren().add(aiBox);
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // CARD 4 — "Inventory Health" → Santé des Salles
-    // ─────────────────────────────────────────────────────────────────
     private void buildCardHealth() {
         if (rapportHealthContainer == null) return;
         rapportHealthContainer.getChildren().clear();
         rapportHealthContainer.setSpacing(10);
         rapportHealthContainer.setPadding(new Insets(20));
-
         rapportHealthContainer.getChildren().add(cardHeader("Santé des Salles", "Vue globale occupation"));
 
         Map<String, Double> taux = rapportService.getTauxOccupation();
-        double global  = rapportService.getTauxOccupationGlobal();
-        int    total   = Math.max(1, taux.size());
+        double global = rapportService.getTauxOccupationGlobal();
+        int    total  = Math.max(1, taux.size());
         long   surOcc  = taux.values().stream().filter(t -> t >= 80).count();
         long   sousOcc = taux.values().stream().filter(t -> t < 10).count();
         double pctSur  = (surOcc  * 100.0) / total;
         double pctSous = (sousOcc * 100.0) / total;
 
-        // ── 3 métriques (comme "38%  12%  0%") ───────────────────
         HBox metricsRow = new HBox(20); metricsRow.setAlignment(Pos.CENTER_LEFT);
         metricsRow.getChildren().addAll(
                 healthMetric(String.format("%.0f%%", global), "Overall Health"),
@@ -474,66 +343,42 @@ public class GestionnaireDashboardController extends BaseController {
         );
         rapportHealthContainer.getChildren().add(metricsRow);
 
-        // ── 3 barres verticales (comme l'image) ───────────────────
         HBox barsRow = new HBox(18); barsRow.setAlignment(Pos.BOTTOM_LEFT);
         barsRow.setPrefHeight(120); barsRow.setPadding(new Insets(8, 0, 0, 0));
-
-        // Barre 1 : pleine teal-mid (Overall)
-        barsRow.getChildren().add(barreVerticale(global,  T_MID,   false));
-        // Barre 2 : hachurée teal-dark (Overcapacity)
-        barsRow.getChildren().add(barreVerticale(pctSur,  T_DARK,  true));
-        // Barre 3 : pâle teal-light (Undercapacity)
+        barsRow.getChildren().add(barreVerticale(global, T_MID, false));
+        barsRow.getChildren().add(barreVerticale(pctSur, T_DARK, true));
         barsRow.getChildren().add(barreVerticaleLight(pctSous, T_LIGHT));
-
         rapportHealthContainer.getChildren().add(barsRow);
 
-        // ── Légende ───────────────────────────────────────────────
-        HBox legend = new HBox(14); legend.setAlignment(Pos.CENTER_LEFT);
-        legend.setPadding(new Insets(6, 0, 0, 0));
-        legend.getChildren().addAll(
-                legendDot(T_MID,   "Taux global"),
-                legendDot(T_DARK,  "Suroccupées"),
-                legendDot(T_LIGHT, "Sous-utilisées")
-        );
+        HBox legend = new HBox(14); legend.setAlignment(Pos.CENTER_LEFT); legend.setPadding(new Insets(6, 0, 0, 0));
+        legend.getChildren().addAll(legendDot(T_MID,"Taux global"), legendDot(T_DARK,"Suroccupées"), legendDot(T_LIGHT,"Sous-utilisées"));
         rapportHealthContainer.getChildren().add(legend);
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Widgets helpers
-    // ════════════════════════════════════════════════════════════════
-
+    // ── Widget helpers ────────────────────────────────────────────
     private HBox cardHeader(String title, String subtitle) {
         HBox h = new HBox(); h.setAlignment(Pos.CENTER_LEFT);
         VBox tx = new VBox(2);
-        Label t = new Label(title);
-        t.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
-        Label s = new Label(subtitle);
-        s.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
+        Label t = new Label(title); t.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label s = new Label(subtitle); s.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
         tx.getChildren().addAll(t, s);
         Region e = new Region(); HBox.setHgrow(e, Priority.ALWAYS);
         Label menu = new Label("⋮"); menu.setStyle("-fx-font-size:18px;-fx-text-fill:"+MUTED+";-fx-cursor:hand;");
         h.getChildren().addAll(tx, e, menu);
         return h;
     }
-
     private Label pill(String text, String bg, String fg) {
         Label l = new Label(text);
-        l.setStyle("-fx-background-color:"+bg+";-fx-text-fill:"+fg+";"+
-                "-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:5 12;-fx-background-radius:999;");
+        l.setStyle("-fx-background-color:"+bg+";-fx-text-fill:"+fg+";-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:5 12;-fx-background-radius:999;");
         return l;
     }
-
     private VBox miniStat(String value, String label, String color) {
         VBox b = new VBox(2); b.setAlignment(Pos.CENTER);
-        Label v = new Label(value);
-        v.setStyle("-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:"+color+";");
-        Label l = new Label(label);
-        l.setStyle("-fx-font-size:10px;-fx-text-fill:"+MUTED+";");
+        Label v = new Label(value); v.setStyle("-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:"+color+";");
+        Label l = new Label(label); l.setStyle("-fx-font-size:10px;-fx-text-fill:"+MUTED+";");
         b.getChildren().addAll(v, l);
         return b;
     }
-
-    /** Barre verticale pour Supply (groupée) */
     private VBox barreSingle(int value, double scale, String color, int width) {
         VBox b = new VBox(); b.setAlignment(Pos.BOTTOM_CENTER);
         double h = Math.max(4, value * scale);
@@ -542,58 +387,41 @@ public class GestionnaireDashboardController extends BaseController {
         b.getChildren().add(r);
         return b;
     }
-
-    /** Barre verticale Health (pleine ou hachurée) */
     private VBox barreVerticale(double pct, String color, boolean hachure) {
-        VBox col = new VBox(4); col.setAlignment(Pos.BOTTOM_CENTER);
-        HBox.setHgrow(col, Priority.ALWAYS);
+        VBox col = new VBox(4); col.setAlignment(Pos.BOTTOM_CENTER); HBox.setHgrow(col, Priority.ALWAYS);
         double h = Math.max(12, (pct / 100.0) * 100);
         Region r = new Region(); r.setPrefSize(54, h); r.setMinHeight(h);
-        String style = hachure
+        r.setStyle(hachure
                 ? "-fx-background-color:repeating-linear-gradient(135deg,"+color+","+color+" 4px,rgba(26,95,110,0.28) 4px,rgba(26,95,110,0.28) 8px);-fx-background-radius:6 6 2 2;"
-                : "-fx-background-color:"+color+";-fx-background-radius:6 6 2 2;";
-        r.setStyle(style);
+                : "-fx-background-color:"+color+";-fx-background-radius:6 6 2 2;");
         col.getChildren().add(r);
         return col;
     }
-
-    /** Barre verticale Health transparente (Undercapacity) */
     private VBox barreVerticaleLight(double pct, String color) {
-        VBox col = new VBox(4); col.setAlignment(Pos.BOTTOM_CENTER);
-        HBox.setHgrow(col, Priority.ALWAYS);
+        VBox col = new VBox(4); col.setAlignment(Pos.BOTTOM_CENTER); HBox.setHgrow(col, Priority.ALWAYS);
         double h = Math.max(12, (pct / 100.0) * 100);
         Region r = new Region(); r.setPrefSize(54, h); r.setMinHeight(h);
         r.setStyle("-fx-background-color:"+color+";-fx-opacity:0.55;-fx-background-radius:6 6 2 2;");
         col.getChildren().add(r);
         return col;
     }
-
-    /** Métrique santé */
     private VBox healthMetric(String value, String label) {
         VBox b = new VBox(2);
-        Label v = new Label(value);
-        v.setStyle("-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
-        Label l = new Label(label);
-        l.setStyle("-fx-font-size:10px;-fx-text-fill:"+MUTED+";");
+        Label v = new Label(value); v.setStyle("-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label l = new Label(label); l.setStyle("-fx-font-size:10px;-fx-text-fill:"+MUTED+";");
         b.getChildren().addAll(v, l);
         return b;
     }
-
-    /** Point + texte légende */
     private HBox legendDot(String color, String label) {
         HBox h = new HBox(5); h.setAlignment(Pos.CENTER_LEFT);
         Region dot = new Region(); dot.setPrefSize(8, 8); dot.setMinSize(8, 8);
         dot.setStyle("-fx-background-color:"+color+";-fx-background-radius:50;");
-        Label lbl = new Label(label);
-        lbl.setStyle("-fx-font-size:10px;-fx-text-fill:"+SECOND+";");
+        Label lbl = new Label(label); lbl.setStyle("-fx-font-size:10px;-fx-text-fill:"+SECOND+";");
         h.getChildren().addAll(dot, lbl);
         return h;
     }
 
-    // ════════════════════════════════════════════════════════════════
-    //  Calculs données
-    // ════════════════════════════════════════════════════════════════
-
+    // ── Calculs ───────────────────────────────────────────────────
     private String[] derniersMois(int n) {
         String[] lbis = new String[n];
         for (int i = 0; i < n; i++) {
@@ -602,33 +430,24 @@ public class GestionnaireDashboardController extends BaseController {
         }
         return lbis;
     }
-
     private double[] computeWeekRates(int n) {
         double[] rates = new double[n];
         for (int i = 0; i < n; i++) {
             LocalDate start = LocalDate.now().with(java.time.DayOfWeek.MONDAY).minusWeeks(n - 1 - i);
             LocalDate end   = start.plusDays(6);
-            long total = coursList.stream().filter(c ->
-                    c.getDate() != null && !c.getDate().isBefore(start) && !c.getDate().isAfter(end)).count();
-            long done  = coursList.stream().filter(c ->
-                    c.getDate() != null && !c.getDate().isBefore(start) && !c.getDate().isAfter(end)
-                            && ("TERMINE".equalsIgnoreCase(c.getStatut()) || "REALISE".equalsIgnoreCase(c.getStatut()))).count();
+            long total = coursList.stream().filter(c -> c.getDate() != null && !c.getDate().isBefore(start) && !c.getDate().isAfter(end)).count();
+            long done  = coursList.stream().filter(c -> c.getDate() != null && !c.getDate().isBefore(start) && !c.getDate().isAfter(end) && ("TERMINE".equalsIgnoreCase(c.getStatut()) || "REALISE".equalsIgnoreCase(c.getStatut()))).count();
             rates[i] = total > 0 ? (done * 100.0 / total) : (i == n-1 ? 57 : 18 + i * 5);
         }
         return rates;
     }
-
     private String getJourPlusCharge() {
-        return coursDAO.countByJour().entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse("Jeudi");
+        return coursDAO.countByJour().entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("Jeudi");
     }
 
     // ════════════════════════════════════════════════════════════════
     //  Setup Tables
     // ════════════════════════════════════════════════════════════════
-
     private void setupCoursTable() {
         colMat.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getMatiereNom()));
         colEns.setCellValueFactory(d->new SimpleStringProperty(d.getValue().getEnseignantNom()));
@@ -738,28 +557,25 @@ public class GestionnaireDashboardController extends BaseController {
         if(signalBadge!=null){signalBadge.setText(nbEA>0?"🔴 "+nbEA+" en attente":"");signalBadge.setStyle("-fx-text-fill:#991b1b;-fx-font-weight:bold;-fx-background-color:"+RED_BG+";-fx-background-radius:20;-fx-padding:3 12;");signalBadge.setVisible(nbEA>0);}
         refreshNotifBadge();
     }
-
     private void refreshNotifBadge(){
         if(notifBadge==null)return;
         int nb=notifDAO.countUnread(currentUser.getId());
         notifBadge.setText(String.valueOf(nb));notifBadge.setVisible(nb>0);
     }
-
     @FXML private void handleVoirNotifications(){
         List<Notification> notifs=notifDAO.findByUtilisateur(currentUser.getId());
         notifDAO.markAllRead(currentUser.getId());refreshNotifBadge();
         AlertePersonnalisee.afficherNotifications(notifs);
     }
-
+    /** Ouvre le chatbot */
     @FXML protected void openChatbot() {
-        // Chatbot à implémenter
+        AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet());
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Charts classiques (occupation, cours/jour, statut)
+    //  Charts classiques
     // ════════════════════════════════════════════════════════════════
     private void buildCharts(){
-        // BarChart Cours par Jour
         if(chartCoursContainer!=null){
             CategoryAxis xA=new CategoryAxis();NumberAxis yA=new NumberAxis();
             xA.setLabel("Jour");yA.setLabel("Cours planifiés");
@@ -770,19 +586,13 @@ public class GestionnaireDashboardController extends BaseController {
             Map<String, Integer> parJour = coursDAO.countByJour();
             long max=parJour.values().stream().mapToLong(v->v).max().orElse(1);
             parJour.forEach((k,v)->{
-                XYChart.Data<String,Number> d=new XYChart.Data<>(k,v);
-                s.getData().add(d);
-                d.nodeProperty().addListener((obs,old,node)->{
-                    if(node!=null)node.setStyle("-fx-bar-fill:"+(v==max?T_DARK:T_MID)+";-fx-background-radius:6 6 2 2;");
-                });
+                XYChart.Data<String,Number> d=new XYChart.Data<>(k,v);s.getData().add(d);
+                d.nodeProperty().addListener((obs,old,node)->{if(node!=null)node.setStyle("-fx-bar-fill:"+(v==max?T_DARK:T_MID)+";-fx-background-radius:6 6 2 2;");});
             });
             bar.getData().add(s);
-            bar.getData().get(0).getData().forEach(d->{
-                if(d.getNode()!=null){long v=d.getYValue().longValue();d.getNode().setStyle("-fx-bar-fill:"+(v==max?T_DARK:T_MID)+";-fx-background-radius:6 6 2 2;");}
-            });
+            bar.getData().get(0).getData().forEach(d->{if(d.getNode()!=null){long v=d.getYValue().longValue();d.getNode().setStyle("-fx-bar-fill:"+(v==max?T_DARK:T_MID)+";-fx-background-radius:6 6 2 2;");}});
             chartCoursContainer.getChildren().setAll(bar);
         }
-        // PieChart Statut
         if(chartReservContainer!=null){
             PieChart pie=new PieChart();pie.setTitle("📊 Statut des Cours");pie.setPrefHeight(240);
             pie.setStyle("-fx-background-color:transparent;");
@@ -793,7 +603,6 @@ public class GestionnaireDashboardController extends BaseController {
         }
         buildOccupationChart();
     }
-
     void buildOccupationChart(){
         if(chartOccupationContainer==null)return;
         Map<String,Double> taux=rapportService.getTauxOccupation();
@@ -804,8 +613,7 @@ public class GestionnaireDashboardController extends BaseController {
         bar.setBarGap(2);bar.setCategoryGap(8);bar.setStyle("-fx-background-color:transparent;");
         XYChart.Series<String,Number> series=new XYChart.Series<>();
         taux.forEach((salle,occ)->{
-            XYChart.Data<String,Number> d=new XYChart.Data<>(salle,occ);
-            series.getData().add(d);
+            XYChart.Data<String,Number> d=new XYChart.Data<>(salle,occ);series.getData().add(d);
             d.nodeProperty().addListener((obs,old,node)->{if(node!=null)node.setStyle(styleBarreOcc(occ));});
         });
         bar.getData().add(series);
@@ -818,14 +626,20 @@ public class GestionnaireDashboardController extends BaseController {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Carte salles
+    //  Carte Salles — ✅ countLibresAujourdhui() au lieu de countDisponibles()
     // ════════════════════════════════════════════════════════════════
     private void buildCarteSalles(){
         if(carteContainer==null)return;carteContainer.getChildren().clear();
-        Map<String,Double> taux=rapportService.getTauxOccupation();List<Salle> salles=salleDAO.findAll();
-        Label title=new Label("🗺️ Carte Interactive des Salles");title.setStyle("-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";-fx-padding:0 0 8 0;");
+        Map<String,Double> taux=rapportService.getTauxOccupation();
+        List<Salle> salles=salleDAO.findAll();
+        Label title=new Label("🗺️ Carte Interactive des Salles");
+        title.setStyle("-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";-fx-padding:0 0 8 0;");
         HBox legend=new HBox(16);legend.setAlignment(Pos.CENTER_LEFT);
-        legend.getChildren().addAll(makeChip("🟢 Normal (< 50%)",GREEN_BG,"#166534"),makeChip("🟡 Élevé (50–80%)",GOLD_BG,"#854d0e"),makeChip("🔴 Critique (> 80%)",RED_BG,"#991b1b"),makeChip("⚫ Indisponible","#f0f4f4",MUTED));
+        legend.getChildren().addAll(
+                makeChip("🟢 Normal (< 50%)",GREEN_BG,"#166534"),
+                makeChip("🟡 Élevé (50-80%)",GOLD_BG,"#854d0e"),
+                makeChip("🔴 Critique (> 80%)",RED_BG,"#991b1b"),
+                makeChip("⚫ Indisponible","#f0f4f4",MUTED));
         Map<String,List<Salle>> parBat=new LinkedHashMap<>();
         for(Salle s:salles){String b=s.getBatimentNom()!=null?s.getBatimentNom():"Sans bâtiment";parBat.computeIfAbsent(b,x->new ArrayList<>()).add(s);}
         VBox all=new VBox(16);
@@ -833,16 +647,30 @@ public class GestionnaireDashboardController extends BaseController {
             VBox batBox=new VBox(8);batBox.setStyle("-fx-background-color:white;-fx-padding:14;-fx-background-radius:12;-fx-effect:dropshadow(gaussian,rgba(26,95,110,0.10),10,0,0,2);");
             Label batLbl=new Label("🏢 "+e.getKey());batLbl.setStyle("-fx-font-weight:bold;-fx-font-size:13px;-fx-text-fill:"+T_DARK+";");
             FlowPane fp=new FlowPane(10,10);
-            for(Salle s:e.getValue()){double t=taux.getOrDefault(s.getNumero(),0.0);String bg,fg;
-                if(!s.isDisponible()){bg="#f0f4f4";fg=MUTED;}else if(t>=80){bg=RED_BG;fg="#991b1b";}else if(t>=50){bg=GOLD_BG;fg="#854d0e";}else{bg=GREEN_BG;fg="#166534";}
+            for(Salle s:e.getValue()){
+                double t=taux.getOrDefault(s.getNumero(),0.0);String bg,fg;
+                if(!s.isDisponible()){bg="#f0f4f4";fg=MUTED;}
+                else if(t>=80){bg=RED_BG;fg="#991b1b";}
+                else if(t>=50){bg=GOLD_BG;fg="#854d0e";}
+                else{bg=GREEN_BG;fg="#166534";}
                 VBox card=new VBox(4);card.setAlignment(Pos.CENTER);card.setPadding(new Insets(10,14,10,14));card.setPrefWidth(110);
                 card.setStyle("-fx-background-color:"+bg+";-fx-background-radius:10;-fx-border-color:"+fg+";-fx-border-radius:10;-fx-border-width:1.5;-fx-cursor:hand;");
                 Label n=new Label(s.getNumero());n.setStyle("-fx-font-weight:bold;-fx-font-size:13px;-fx-text-fill:"+fg+";");
                 Label tp=new Label(s.getTypeSalle()+" | "+s.getCapacite()+"p");tp.setStyle("-fx-font-size:10px;-fx-text-fill:"+MUTED+";");
                 Label tx=new Label(s.isDisponible()?t+"%":"Indisponible");tx.setStyle("-fx-font-size:10px;-fx-font-weight:bold;-fx-text-fill:"+fg+";");
-                card.getChildren().addAll(n,tp,tx);Tooltip.install(card,new Tooltip(s.getNumero()+" — "+s.getTypeSalle()+"\nCapacité : "+s.getCapacite()+" places\nOccupation : "+t+"%\nStatut : "+(s.isDisponible()?"✅ Disponible":"🔒 Indisponible")));fp.getChildren().add(card);}
-            batBox.getChildren().addAll(batLbl,fp);all.getChildren().add(batBox);}
-        Label global=new Label(String.format("📊 Taux global : %.1f%%  |  Salles critiques : %d  |  Disponibles : %d",rapportService.getTauxOccupationGlobal(),rapportService.getSallesCritiques().size(),salleDAO.countDisponibles()));
+                card.getChildren().addAll(n,tp,tx);
+                Tooltip.install(card,new Tooltip(s.getNumero()+" — "+s.getTypeSalle()+"\nCapacité : "+s.getCapacite()+" places\nOccupation : "+t+"%\nStatut : "+(s.isDisponible()?"✅ Disponible":"🔒 Indisponible")));
+                fp.getChildren().add(card);
+            }
+            batBox.getChildren().addAll(batLbl,fp);all.getChildren().add(batBox);
+        }
+        // ✅ countLibresAujourdhui() = réellement libres (pas de cours planifié aujourd'hui)
+        long libresAujourdhui = salleDAO.countLibresAujourdhui();
+        Label global=new Label(String.format(
+                "📊 Taux global : %.1f%%  |  Salles critiques : %d  |  Libres aujourd'hui : %d",
+                rapportService.getTauxOccupationGlobal(),
+                rapportService.getSallesCritiques().size(),
+                libresAujourdhui));
         global.setStyle("-fx-font-size:12px;-fx-text-fill:"+SECOND+";-fx-padding:4 0 0 0;");
         carteContainer.getChildren().addAll(title,legend,global,all);
     }
@@ -908,12 +736,26 @@ public class GestionnaireDashboardController extends BaseController {
         int excl=selectedCours!=null?selectedCours.getId():0;
         boolean cs=coursDAO.hasConflitSalle(s.getId(),cr.getId(),d.toString(),excl);
         boolean ce=en!=null&&coursDAO.hasConflitEnseignant(en.getId(),cr.getId(),d.toString(),excl);
-        if(cs){conflitLabel.setText("⚠ CONFLIT : Salle déjà occupée !");conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;");conflitLabel.setVisible(true);AlerteService.alerterConflit("Salle "+s.getNumero()+" occupée le "+d+" créneau "+cr);}
-        else if(ce){conflitLabel.setText("⚠ CONFLIT : Enseignant indisponible !");conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;");conflitLabel.setVisible(true);}
-        else{conflitLabel.setVisible(false);}
+        // ✅ FIX : vérification visuelle UNIQUEMENT — PLUS d'email ici.
+        // AlerteService.alerterConflit() était déclenché à chaque changement
+        // de combo (salle, enseignant, créneau, date) → un email par champ
+        // modifié = spam + freeze UI ("Java ne répond pas").
+        // L'alerte email est envoyée uniquement lors de la sauvegarde réelle.
+        if(cs){
+            conflitLabel.setText("⚠ CONFLIT : Salle déjà occupée !");
+            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"
+                    +"-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
+            conflitLabel.setVisible(true);
+        } else if(ce){
+            conflitLabel.setText("⚠ CONFLIT : Enseignant indisponible !");
+            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"
+                    +"-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
+            conflitLabel.setVisible(true);
+        } else {
+            conflitLabel.setVisible(false);
+        }
     }
 
-    // ── CRUD ─────────────────────────────────────────────────────
     private void assignerSalleAutomatique(){
         if(salleAutoLabel==null)return;ClassePedago classe=classeCombo.getValue();Creneau creneau=creneauCombo.getValue();LocalDate date=datePicker.getValue();
         if(classe==null||creneau==null||date==null){salleAutoLabel.setVisible(false);return;}
@@ -936,7 +778,22 @@ public class GestionnaireDashboardController extends BaseController {
         Cours c=selectedCours!=null?selectedCours:new Cours();
         c.setMatiereId(matiereCombo.getValue().getId());c.setEnseignantId(enseignantCombo.getValue().getId());c.setClasseId(classeCombo.getValue().getId());c.setCreneauId(creneauCombo.getValue().getId());c.setSalleId(salleCombo.getValue().getId());c.setDate(datePicker.getValue());c.setStatut(statutCombo.getValue()!=null?statutCombo.getValue():"PLANIFIE");
         coursDAO.save(c);
-        if(ancSalle!=null&&!ancSalle.equals(salleCombo.getValue().getNumero())){Utilisateur en=enseignantCombo.getValue();c.setSalleNumero(salleCombo.getValue().getNumero());c.setMatiereNom(matiereCombo.getValue().getNom());c.setClasseNom(classeCombo.getValue().getNom());c.setCreneauInfo(creneauCombo.getValue().toString());EmailService.notifierChangementSalle(en,c,ancSalle);AlerteService.notifierUtilisateur(en.getId(),"🔔 Votre cours "+matiereCombo.getValue().getNom()+" a changé de salle : "+ancSalle+" → "+salleCombo.getValue().getNumero(),"INFO");}
+        // ✅ FIX : emails envoyés dans un Thread background
+        // → ne bloque plus le thread JavaFX UI
+        if(ancSalle!=null&&!ancSalle.equals(salleCombo.getValue().getNumero())){
+            Utilisateur en=enseignantCombo.getValue();
+            c.setSalleNumero(salleCombo.getValue().getNumero());
+            c.setMatiereNom(matiereCombo.getValue().getNom());
+            c.setClasseNom(classeCombo.getValue().getNom());
+            c.setCreneauInfo(creneauCombo.getValue().toString());
+            AlerteService.notifierUtilisateur(en.getId(),
+                    "🔔 Votre cours "+matiereCombo.getValue().getNom()+" a changé de salle : "
+                            +ancSalle+" → "+salleCombo.getValue().getNumero(),"INFO");
+            final Cours coursEmail = c;
+            final String ancSalleFinal = ancSalle;
+            new Thread(() -> EmailService.notifierChangementSalle(en, coursEmail, ancSalleFinal),
+                    "email-changement-salle").start();
+        }
         loadData();buildCharts();buildRapportDashboard();if(vueMoisActive)buildCalendarMois();else buildCalendar();buildCarteSalles();clearForm();showInfo("Succès","Cours sauvegardé.");
     }
     @FXML private void handleDeleteCours(){
@@ -947,14 +804,28 @@ public class GestionnaireDashboardController extends BaseController {
         if(selectedReserv==null){showError("Erreur","Sélectionnez une réservation.");return;}
         reservDAO.updateStatut(selectedReserv.getId(),"VALIDEE");
         Notification n=new Notification();n.setMessage("✅ Votre réservation salle "+selectedReserv.getSalleNumero()+" a été validée.");n.setType("INFO");n.setUtilisateurId(selectedReserv.getUtilisateurId());notifDAO.save(n);
-        utilisateurDAO.findAll().stream().filter(u->u.getId()==selectedReserv.getUtilisateurId()).findFirst().ifPresent(u->EmailService.notifierValidationReservation(u,selectedReserv));
+        // ✅ Email en background thread — ne bloque pas l'UI
+        final Reservation rFinal = selectedReserv;
+        utilisateurDAO.findAll().stream().filter(u->u.getId()==rFinal.getUtilisateurId())
+                .findFirst().ifPresent(u -> {
+                    final Utilisateur uFinal = u;
+                    new Thread(() -> EmailService.notifierValidationReservation(uFinal, rFinal),
+                            "email-validation-reserv").start();
+                });
         loadData();showInfo("Succès","Réservation validée.");
     }
     @FXML private void handleRefuserReserv(){
         if(selectedReserv==null){showError("Erreur","Sélectionnez une réservation.");return;}
         reservDAO.updateStatut(selectedReserv.getId(),"REFUSEE");
         Notification n=new Notification();n.setMessage("❌ Votre réservation salle "+selectedReserv.getSalleNumero()+" a été refusée.");n.setType("ALERTE");n.setUtilisateurId(selectedReserv.getUtilisateurId());notifDAO.save(n);
-        utilisateurDAO.findAll().stream().filter(u->u.getId()==selectedReserv.getUtilisateurId()).findFirst().ifPresent(u->EmailService.notifierRefusReservation(u,selectedReserv));
+        // ✅ Email en background thread
+        final Reservation rRefus = selectedReserv;
+        utilisateurDAO.findAll().stream().filter(u->u.getId()==rRefus.getUtilisateurId())
+                .findFirst().ifPresent(u -> {
+                    final Utilisateur uFinal = u;
+                    new Thread(() -> EmailService.notifierRefusReservation(uFinal, rRefus),
+                            "email-refus-reserv").start();
+                });
         loadData();showInfo("Fait","Réservation refusée.");
     }
     @FXML private void handleTraiterSignalement(){
@@ -988,14 +859,12 @@ public class GestionnaireDashboardController extends BaseController {
     @FXML private void handleRapportHebdo(){
         Map<String,Object>r=rapportService.getRapportHebdomadaire();
         if(rapportTextArea!=null){StringBuilder sb=new StringBuilder();sb.append("══════════════════════\n       ").append(r.get("titre")).append("\n══════════════════════\n");r.forEach((k,v)->{if(!k.equals("titre")&&!k.equals("coursParJour")&&!k.equals("coursParStatut"))sb.append(String.format("  %-28s : %s%n",k,v));});sb.append("\n── Cours par jour ──\n");if(r.get("coursParJour")instanceof Map)((Map<?,?>)r.get("coursParJour")).forEach((k,v)->sb.append("  ").append(k).append(" : ").append(v).append("\n"));sb.append("\n── Cours par statut ──\n");if(r.get("coursParStatut")instanceof Map)((Map<?,?>)r.get("coursParStatut")).forEach((k,v)->sb.append("  ").append(k).append(" : ").append(v).append("\n"));rapportTextArea.setText(sb.toString());}
-        buildOccupationChart();critList.setAll(rapportService.getSallesCritiques());
-        buildRapportDashboard(); // rafraîchit les 4 cartes
+        buildOccupationChart();critList.setAll(rapportService.getSallesCritiques());buildRapportDashboard();
     }
     @FXML private void handleRapportMensuel(){
         Map<String,Object>r=rapportService.getRapportMensuel();
         if(rapportTextArea!=null){StringBuilder sb=new StringBuilder();sb.append("══════════════════════\n       ").append(r.get("titre")).append(" — ").append(r.get("mois")).append("\n══════════════════════\n");r.forEach((k,v)->{if(!k.equals("titre")&&!k.equals("mois")&&!k.equals("coursParJour")&&!k.equals("coursParStatut")&&!k.equals("tauxOccupationParSalle"))sb.append(String.format("  %-28s : %s%n",k,v));});sb.append("\n── Taux par salle ──\n");if(r.get("tauxOccupationParSalle")instanceof Map)((Map<?,?>)r.get("tauxOccupationParSalle")).forEach((k,v)->sb.append("  ").append(k).append(" : ").append(v).append("%\n"));rapportTextArea.setText(sb.toString());}
-        buildOccupationChart();critList.setAll(rapportService.getSallesCritiques());
-        buildRapportDashboard();
+        buildOccupationChart();critList.setAll(rapportService.getSallesCritiques());buildRapportDashboard();
     }
 
     @FXML private void handleRefreshRapport(){loadData();buildRapportDashboard();buildCharts();}

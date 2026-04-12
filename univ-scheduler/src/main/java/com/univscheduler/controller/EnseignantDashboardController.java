@@ -7,6 +7,7 @@ import com.univscheduler.model.AlertePersonnalisee;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import com.univscheduler.service.EmailService;
+import javafx.application.Platform;
 import javafx.collections.*;
 import javafx.fxml.FXML;
 import javafx.scene.chart.*;
@@ -21,12 +22,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class EnseignantDashboardController extends BaseController {
 
     // ─── EDT ───
-    @FXML private Label welcomeLabel, totalCoursLabel, totalReservsLabel;
+    @FXML private Label  welcomeLabel, totalCoursLabel, totalReservsLabel;
     @FXML private TableView<Cours> coursTable;
     @FXML private TableColumn<Cours, String> colMat, colCls, colCren, colSalle, colDate, colStatut;
     @FXML private TableColumn<Cours, String> colHeureDebut, colHeureFin;
@@ -61,7 +65,9 @@ public class EnseignantDashboardController extends BaseController {
     // ─── NOTIFICATIONS ───
     @FXML private TableView<Notification> notifTable;
     @FXML private TableColumn<Notification, String> colNotifMsg, colNotifType, colNotifDate;
-    @FXML private Label notifBadge;
+
+    // ✅ MODIFIÉ : notifBadge est maintenant un Button (fx:id="notifBadgeBtn")
+    @FXML private Button notifBadgeBtn;
 
     // ─── SIGNALEMENT ───
     @FXML private TextField        sigTitreField;
@@ -91,11 +97,33 @@ public class EnseignantDashboardController extends BaseController {
 
     private Reservation selectedReserv = null;
 
+    // ✅ NOUVEAU : scheduler pour le rappel de statut des cours expirés
+    private ScheduledExecutorService rappelStatutScheduler;
+
+    // IDs cours déjà notifiés pour éviter les doublons
+    private final Set<Integer> coursDejaNotifies = new HashSet<>();
+
     private static final List<String> HEURES = List.of(
             "08:00","09:00","10:00","11:00","12:00","13:00",
             "14:00","15:00","16:00","17:00","18:00","19:00","20:00");
 
-    // ── ✅ Helper : Gmail uniquement ──────────────────────────────
+    // ── Couleurs statuts graphe ────────────────────────────────────
+    private static final Map<String, String> COULEURS_STATUT = Map.of(
+            "PLANIFIE", "#3b82f6",
+            "REALISE",  "#10b981",
+            "ANNULE",   "#ef4444",
+            "EN_COURS", "#f59e0b",
+            "TERMINE",  "#6b7280"
+    );
+    private static final Map<String, String> LABELS_STATUT = Map.of(
+            "PLANIFIE", "📅 Planifié",
+            "REALISE",  "✅ Réalisé",
+            "ANNULE",   "❌ Annulé",
+            "EN_COURS", "🔄 En cours",
+            "TERMINE",  "🏁 Terminé"
+    );
+
+    // ── Helper Gmail ──────────────────────────────────────────────
     private static boolean isGmail(Utilisateur u) {
         return u.getEmail() != null && u.getEmail().endsWith("@gmail.com");
     }
@@ -115,7 +143,119 @@ public class EnseignantDashboardController extends BaseController {
         loadData();
         buildChart();
         handleRechercherSalles();
+        // Service rappel réservations
         Servicerappel.getInstance().demarrer();
+        // ✅ NOUVEAU : service rappel statut cours expirés
+        demarrerRappelStatutCours();
+    }
+
+    // ═══════════════════════════ RAPPEL STATUT COURS ══════════════
+    /**
+     * ✅ NOUVEAU : Vérifie toutes les heures si un cours PLANIFIE
+     * a une date dépassée. Si oui, envoie une notification + email.
+     */
+    private void demarrerRappelStatutCours() {
+        if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown()) return;
+        rappelStatutScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "RappelStatutCours");
+            t.setDaemon(true);
+            return t;
+        });
+        coursDejaNotifies.clear();
+        rappelStatutScheduler.scheduleAtFixedRate(() -> {
+            try {
+                List<Cours> mesCours = coursDAO.findByEnseignant(currentUser.getId());
+                LocalDate today = LocalDate.now();
+                for (Cours c : mesCours) {
+                    if (!"PLANIFIE".equals(c.getStatut())) continue;
+                    if (c.getDate() == null) continue;
+                    // Le cours est passé mais toujours PLANIFIE
+                    if (c.getDate().isBefore(today) && !coursDejaNotifies.contains(c.getId())) {
+                        coursDejaNotifies.add(c.getId());
+                        envoyerRappelStatut(c);
+                    }
+                }
+                // Rafraîchir le badge notif sur le thread JavaFX
+                Platform.runLater(this::rafraichirBadgeNotif);
+            } catch (Exception e) {
+                System.err.println("[RappelStatut] Erreur : " + e.getMessage());
+            }
+        }, 0, 1, TimeUnit.HOURS);
+        System.out.println("[RappelStatut] Démarré — vérification toutes les heures.");
+    }
+
+    private void envoyerRappelStatut(Cours c) {
+        String msg = "⏰ Rappel statut : Le cours « " + c.getMatiereNom()
+                + " » (" + c.getClasseNom() + ")"
+                + " du " + c.getDate()
+                + " est terminé mais toujours « PLANIFIÉ »."
+                + " Merci de mettre à jour son statut (Réalisé ou Annulé).";
+
+        Notification n = new Notification();
+        n.setUtilisateurId(currentUser.getId());
+        n.setType("ALERTE");
+        n.setMessage(msg);
+        n.setDateEnvoi(LocalDateTime.now());
+        notifDAO.save(n);
+
+        // Email si Gmail
+        if (isGmail(currentUser)) {
+            EmailService.sendNotification(currentUser,
+                    "⏰ Statut à mettre à jour — " + c.getMatiereNom(),
+                    "Bonjour " + currentUser.getNomComplet() + ",\n\n"
+                            + "Le cours suivant est terminé mais son statut est toujours « PLANIFIÉ » :\n"
+                            + "  • Cours  : " + c.getMatiereNom() + " (" + c.getClasseNom() + ")\n"
+                            + "  • Date   : " + c.getDate() + "\n"
+                            + "  • Salle  : " + (c.getSalleNumero() != null ? c.getSalleNumero() : "—") + "\n\n"
+                            + "Merci de le marquer comme « RÉALISÉ » ou « ANNULÉ » depuis votre tableau de bord.\n\n"
+                            + "Cordialement,\nUNIV-SCHEDULER"
+            );
+        }
+        System.out.println("[RappelStatut] Rappel envoyé pour cours #" + c.getId() + " — " + c.getMatiereNom());
+    }
+
+    public void arreterRappelStatutCours() {
+        if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown()) {
+            rappelStatutScheduler.shutdown();
+        }
+    }
+
+    // ═══════════════════════════ BADGE NOTIFICATIONS CLIQUABLE ════
+    /**
+     * ✅ NOUVEAU : Ouvre la fenêtre de notifications au clic sur le badge.
+     */
+    @FXML
+    private void handleOpenNotifications() {
+        List<Notification> notifs = notifDAO.findByUtilisateur(currentUser.getId());
+        AlertePersonnalisee.afficherNotifications(notifs);
+        // Marquer comme lues après consultation
+        notifDAO.markAllRead(currentUser.getId());
+        loadData();
+    }
+
+    /**
+     * ✅ Met à jour le style du bouton badge selon le nombre de non-lues.
+     */
+    private void rafraichirBadgeNotif() {
+        int unread = notifDAO.countUnread(currentUser.getId());
+        if (notifBadgeBtn == null) return;
+        if (unread > 0) {
+            notifBadgeBtn.setText("🔔 " + unread + " non lue(s)");
+            notifBadgeBtn.setStyle(
+                    "-fx-background-color:#fee2e2;-fx-text-fill:#dc2626;" +
+                            "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
+                            "-fx-background-radius:20;-fx-border-color:#fca5a5;" +
+                            "-fx-border-width:1.5;-fx-border-radius:20;-fx-font-size:12px;"
+            );
+        } else {
+            notifBadgeBtn.setText("🔔 Aucune nouvelle");
+            notifBadgeBtn.setStyle(
+                    "-fx-background-color:transparent;-fx-text-fill:#64748b;" +
+                            "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
+                            "-fx-background-radius:20;-fx-border-color:#e2e8f0;" +
+                            "-fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"
+            );
+        }
     }
 
     // ── Helpers extraction créneau ────────────────────────────────
@@ -236,12 +376,11 @@ public class EnseignantDashboardController extends BaseController {
         coursTable.setItems(coursListFiltered);
     }
 
-    // ✅ Changement statut — une seule fois + Gmail uniquement + responsable classe
+    // ✅ Changement statut — avec statut final + Gmail + responsable classe
     private void changerStatutCours(Cours cours, String nouveauStatut) {
         if (cours == null) return;
         String ancienStatut = cours.getStatut() != null ? cours.getStatut() : "PLANIFIE";
 
-        // ✅ Statut final — ne peut plus être modifié
         if ("REALISE".equals(ancienStatut) || "ANNULE".equals(ancienStatut)) {
             showError("Action impossible",
                     "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
@@ -251,7 +390,6 @@ public class EnseignantDashboardController extends BaseController {
         if (nouveauStatut.equals(ancienStatut)) return;
 
         String motifAnnulation = null;
-
         if ("ANNULE".equals(nouveauStatut)) {
             motifAnnulation = AlertePersonnalisee.demanderMotifAnnulation(
                     cours.getMatiereNom() + " — " + cours.getClasseNom(),
@@ -264,6 +402,11 @@ public class EnseignantDashboardController extends BaseController {
 
         cours.setStatut(nouveauStatut);
         coursDAO.updateStatut(cours.getId(), nouveauStatut);
+
+        // ✅ Si le cours est maintenant REALISE, on le retire des rappels
+        if ("REALISE".equals(nouveauStatut) || "ANNULE".equals(nouveauStatut)) {
+            coursDejaNotifies.add(cours.getId());
+        }
 
         String icone = "REALISE".equals(nouveauStatut) ? "✅" : "❌";
         final String motifFinal  = motifAnnulation;
@@ -280,7 +423,7 @@ public class EnseignantDashboardController extends BaseController {
                 + " | " + ancienStatut + " → " + nouveauStatut
                 + (motifFinal != null ? " | Motif : " + motifFinal : "");
 
-        // ✅ Notification + email gestionnaires/admins Gmail uniquement
+        // Notifications + emails gestionnaires/admins
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
@@ -290,7 +433,6 @@ public class EnseignantDashboardController extends BaseController {
                     n.setMessage(message);
                     n.setDateEnvoi(LocalDateTime.now());
                     notifDAO.save(n);
-
                     if ("ANNULE".equals(nouveauStatut) && isGmail(u)) {
                         EmailService.sendNotification(u,
                                 "❌ Cours annulé — " + matiereNom,
@@ -307,7 +449,7 @@ public class EnseignantDashboardController extends BaseController {
                     }
                 });
 
-        // ✅ Email au responsable de classe — UN SEUL étudiant Gmail
+        // Email responsable classe (un étudiant Gmail)
         if ("ANNULE".equals(nouveauStatut)) {
             new UtilisateurDAO().findAll().stream()
                     .filter(u -> "ETUDIANT".equals(u.getRole()))
@@ -345,13 +487,9 @@ public class EnseignantDashboardController extends BaseController {
         if (totalCoursLabel   != null) totalCoursLabel.setText("Mes cours : " + coursList.size());
         if (totalReservsLabel != null) totalReservsLabel.setText("Mes réservations : " + reservList.size());
 
-        int unread = notifDAO.countUnread(currentUser.getId());
-        if (notifBadge != null) {
-            notifBadge.setText(unread > 0 ? "🔔 " + unread + " non lue(s)" : "🔔 Aucune nouvelle");
-            notifBadge.setStyle(unread > 0
-                    ? "-fx-text-fill:#dc2626;-fx-font-weight:bold;"
-                    : "-fx-text-fill:#64748b;");
-        }
+        // ✅ MODIFIÉ : rafraîchir le bouton badge
+        rafraichirBadgeNotif();
+
         long resolus = sigList.stream().filter(s -> "RESOLU".equals(s.getStatut())).count();
         if (sigBadge != null) {
             sigBadge.setText(resolus > 0 ? "✅ " + resolus + " résolu(s)" : "");
@@ -419,26 +557,74 @@ public class EnseignantDashboardController extends BaseController {
     }
 
     // ═══════════════════════════ GRAPHIQUE ════════════════════════
+    /**
+     * ✅ MODIFIÉ : Graphe camembert avec labels explicites sur chaque portion
+     * (nom + nombre + pourcentage) et couleurs distinctes par statut.
+     */
     private void buildChart() {
         if (chartEnsContainer == null) return;
-        Map<String,Integer> statuts = coursDAO.countByStatut();
+        chartEnsContainer.getChildren().clear();
+
+        // Utilise les cours de l'enseignant connecté uniquement
+        Map<String, Integer> statuts = new LinkedHashMap<>();
+        for (Cours c : coursList) {
+            String s = c.getStatut() != null ? c.getStatut() : "INCONNU";
+            statuts.merge(s, 1, Integer::sum);
+        }
+
+        if (statuts.isEmpty()) {
+            Label vide = new Label("Aucune donnée disponible");
+            vide.setStyle("-fx-text-fill:#94a3b8;-fx-font-style:italic;-fx-font-size:12px;");
+            chartEnsContainer.getChildren().add(vide);
+            return;
+        }
+
+        int total = statuts.values().stream().mapToInt(Integer::intValue).sum();
+
         PieChart pie = new PieChart();
-        pie.setTitle("Répartition de mes cours");
-        pie.setPrefHeight(220);
-        pie.setLegendVisible(true);
-        statuts.forEach((k, v) -> {
-            String label;
-            switch (k) {
-                case "PLANIFIE":  label = "📅 Planifié";  break;
-                case "REALISE":   label = "✅ Réalisé";   break;
-                case "ANNULE":    label = "❌ Annulé";    break;
-                case "EN_COURS":  label = "🔄 En cours";  break;
-                case "TERMINE":   label = "🏁 Terminé";   break;
-                default:          label = k;
-            }
-            pie.getData().add(new PieChart.Data(label + " (" + v + ")", v));
+        pie.setTitle("Répartition de mes cours (" + total + " total)");
+        pie.setPrefHeight(260);
+        pie.setLabelsVisible(true);   // ✅ Labels visibles sur chaque portion
+        pie.setLegendVisible(true);   // ✅ Légende en bas
+        pie.setStartAngle(90);        // Meilleure lisibilité
+
+        // Garder référence statut → data pour colorer après
+        List<String> ordreStatuts = new ArrayList<>();
+
+        statuts.forEach((statut, count) -> {
+            int pct = total > 0 ? Math.round((count * 100f) / total) : 0;
+            String labelNom = LABELS_STATUT.getOrDefault(statut, statut);
+            // ✅ Label affiché sur la tranche : "✅ Réalisé\n5 cours · 38%"
+            String labelComplet = labelNom + "\n" + count + " cours · " + pct + "%";
+            pie.getData().add(new PieChart.Data(labelComplet, count));
+            ordreStatuts.add(statut);
         });
-        chartEnsContainer.getChildren().setAll(pie);
+
+        // ✅ Appliquer couleurs + tooltip après que les nœuds sont créés
+        Platform.runLater(() -> {
+            List<PieChart.Data> dataList = new ArrayList<>(pie.getData());
+            for (int i = 0; i < dataList.size() && i < ordreStatuts.size(); i++) {
+                PieChart.Data data = dataList.get(i);
+                String statut = ordreStatuts.get(i);
+                String couleur = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
+                if (data.getNode() != null) {
+                    data.getNode().setStyle("-fx-pie-color: " + couleur + ";");
+                }
+                // Tooltip détaillé au survol
+                Tooltip tooltip = new Tooltip(
+                        LABELS_STATUT.getOrDefault(statut, statut) + "\n"
+                                + data.getPieValue() + " cours"
+                );
+                tooltip.setStyle(
+                        "-fx-font-size:12px;-fx-font-weight:bold;"
+                                + "-fx-background-color:" + couleur + ";-fx-text-fill:white;"
+                                + "-fx-background-radius:6;-fx-padding:6 10;"
+                );
+                Tooltip.install(data.getNode(), tooltip);
+            }
+        });
+
+        chartEnsContainer.getChildren().add(pie);
     }
 
     // ═══════════════════════════ RECHERCHE ════════════════════════
@@ -557,7 +743,6 @@ public class EnseignantDashboardController extends BaseController {
         reservDAO.save(r);
         r.setSalleNumero(s.getNumero());
 
-        // ✅ Email gestionnaires/admins Gmail uniquement
         final String hDebFinal = hDeb;
         final int finFinal = fin;
         new UtilisateurDAO().findAll().stream()
@@ -664,7 +849,6 @@ public class EnseignantDashboardController extends BaseController {
                     notifDAO.save(n);
                 });
 
-        // ✅ Email confirmation enseignant Gmail uniquement
         if (isGmail(currentUser)) {
             EmailService.sendNotification(currentUser,
                     "✅ Signalement #" + sig.getId() + " enregistré",
@@ -749,6 +933,11 @@ public class EnseignantDashboardController extends BaseController {
         catch (Exception e) { showError("Erreur", e.getMessage()); }
     }
 
-    @FXML private void handleLogout()  { logout(); }
-    @FXML private void handleRefresh() { loadData(); }
+    @FXML private void handleLogout()  {
+        arreterRappelStatutCours();
+        Servicerappel.getInstance().arreter();
+        logout();
+    }
+    @FXML private void handleRefresh() { loadData(); buildChart(); }
+
 }
