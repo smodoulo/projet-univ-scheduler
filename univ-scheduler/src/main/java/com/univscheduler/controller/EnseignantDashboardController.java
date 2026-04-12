@@ -10,11 +10,13 @@ import com.univscheduler.service.EmailService;
 import javafx.application.Platform;
 import javafx.collections.*;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import com.univscheduler.service.*;
 import java.io.File;
@@ -65,8 +67,6 @@ public class EnseignantDashboardController extends BaseController {
     // ─── NOTIFICATIONS ───
     @FXML private TableView<Notification> notifTable;
     @FXML private TableColumn<Notification, String> colNotifMsg, colNotifType, colNotifDate;
-
-    // ✅ MODIFIÉ : notifBadge est maintenant un Button (fx:id="notifBadgeBtn")
     @FXML private Button notifBadgeBtn;
 
     // ─── SIGNALEMENT ───
@@ -97,33 +97,29 @@ public class EnseignantDashboardController extends BaseController {
 
     private Reservation selectedReserv = null;
 
-    // ✅ NOUVEAU : scheduler pour le rappel de statut des cours expirés
     private ScheduledExecutorService rappelStatutScheduler;
-
-    // IDs cours déjà notifiés pour éviter les doublons
     private final Set<Integer> coursDejaNotifies = new HashSet<>();
 
     private static final List<String> HEURES = List.of(
             "08:00","09:00","10:00","11:00","12:00","13:00",
             "14:00","15:00","16:00","17:00","18:00","19:00","20:00");
 
-    // ── Couleurs statuts graphe ────────────────────────────────────
+    // ── Couleurs palette teal UNIV-SCHEDULER ─────────────────────
     private static final Map<String, String> COULEURS_STATUT = Map.of(
-            "PLANIFIE", "#3b82f6",
-            "REALISE",  "#10b981",
-            "ANNULE",   "#ef4444",
-            "EN_COURS", "#f59e0b",
-            "TERMINE",  "#6b7280"
+            "PLANIFIE", "#2a9cb0",
+            "REALISE",  "#1a5f6e",
+            "ANNULE",   "#e05c5c",
+            "EN_COURS", "#4ecdc4",
+            "TERMINE",  "#9eb3bf"
     );
     private static final Map<String, String> LABELS_STATUT = Map.of(
-            "PLANIFIE", "📅 Planifié",
-            "REALISE",  "✅ Réalisé",
-            "ANNULE",   "❌ Annulé",
-            "EN_COURS", "🔄 En cours",
-            "TERMINE",  "🏁 Terminé"
+            "PLANIFIE", "Planifié",
+            "REALISE",  "Réalisé",
+            "ANNULE",   "Annulé",
+            "EN_COURS", "En cours",
+            "TERMINE",  "Terminé"
     );
 
-    // ── Helper Gmail ──────────────────────────────────────────────
     private static boolean isGmail(Utilisateur u) {
         return u.getEmail() != null && u.getEmail().endsWith("@gmail.com");
     }
@@ -143,17 +139,11 @@ public class EnseignantDashboardController extends BaseController {
         loadData();
         buildChart();
         handleRechercherSalles();
-        // Service rappel réservations
         Servicerappel.getInstance().demarrer();
-        // ✅ NOUVEAU : service rappel statut cours expirés
         demarrerRappelStatutCours();
     }
 
     // ═══════════════════════════ RAPPEL STATUT COURS ══════════════
-    /**
-     * ✅ NOUVEAU : Vérifie toutes les heures si un cours PLANIFIE
-     * a une date dépassée. Si oui, envoie une notification + email.
-     */
     private void demarrerRappelStatutCours() {
         if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown()) return;
         rappelStatutScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -169,13 +159,11 @@ public class EnseignantDashboardController extends BaseController {
                 for (Cours c : mesCours) {
                     if (!"PLANIFIE".equals(c.getStatut())) continue;
                     if (c.getDate() == null) continue;
-                    // Le cours est passé mais toujours PLANIFIE
                     if (c.getDate().isBefore(today) && !coursDejaNotifies.contains(c.getId())) {
                         coursDejaNotifies.add(c.getId());
                         envoyerRappelStatut(c);
                     }
                 }
-                // Rafraîchir le badge notif sur le thread JavaFX
                 Platform.runLater(this::rafraichirBadgeNotif);
             } catch (Exception e) {
                 System.err.println("[RappelStatut] Erreur : " + e.getMessage());
@@ -186,19 +174,15 @@ public class EnseignantDashboardController extends BaseController {
 
     private void envoyerRappelStatut(Cours c) {
         String msg = "⏰ Rappel statut : Le cours « " + c.getMatiereNom()
-                + " » (" + c.getClasseNom() + ")"
-                + " du " + c.getDate()
+                + " » (" + c.getClasseNom() + ") du " + c.getDate()
                 + " est terminé mais toujours « PLANIFIÉ »."
                 + " Merci de mettre à jour son statut (Réalisé ou Annulé).";
-
         Notification n = new Notification();
         n.setUtilisateurId(currentUser.getId());
         n.setType("ALERTE");
         n.setMessage(msg);
         n.setDateEnvoi(LocalDateTime.now());
         notifDAO.save(n);
-
-        // Email si Gmail
         if (isGmail(currentUser)) {
             EmailService.sendNotification(currentUser,
                     "⏰ Statut à mettre à jour — " + c.getMatiereNom(),
@@ -208,34 +192,24 @@ public class EnseignantDashboardController extends BaseController {
                             + "  • Date   : " + c.getDate() + "\n"
                             + "  • Salle  : " + (c.getSalleNumero() != null ? c.getSalleNumero() : "—") + "\n\n"
                             + "Merci de le marquer comme « RÉALISÉ » ou « ANNULÉ » depuis votre tableau de bord.\n\n"
-                            + "Cordialement,\nUNIV-SCHEDULER"
-            );
+                            + "Cordialement,\nUNIV-SCHEDULER");
         }
-        System.out.println("[RappelStatut] Rappel envoyé pour cours #" + c.getId() + " — " + c.getMatiereNom());
     }
 
     public void arreterRappelStatutCours() {
-        if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown()) {
+        if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown())
             rappelStatutScheduler.shutdown();
-        }
     }
 
-    // ═══════════════════════════ BADGE NOTIFICATIONS CLIQUABLE ════
-    /**
-     * ✅ NOUVEAU : Ouvre la fenêtre de notifications au clic sur le badge.
-     */
+    // ═══════════════════════════ BADGE NOTIFICATIONS ══════════════
     @FXML
     private void handleOpenNotifications() {
         List<Notification> notifs = notifDAO.findByUtilisateur(currentUser.getId());
         AlertePersonnalisee.afficherNotifications(notifs);
-        // Marquer comme lues après consultation
         notifDAO.markAllRead(currentUser.getId());
         loadData();
     }
 
-    /**
-     * ✅ Met à jour le style du bouton badge selon le nombre de non-lues.
-     */
     private void rafraichirBadgeNotif() {
         int unread = notifDAO.countUnread(currentUser.getId());
         if (notifBadgeBtn == null) return;
@@ -245,20 +219,18 @@ public class EnseignantDashboardController extends BaseController {
                     "-fx-background-color:#fee2e2;-fx-text-fill:#dc2626;" +
                             "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
                             "-fx-background-radius:20;-fx-border-color:#fca5a5;" +
-                            "-fx-border-width:1.5;-fx-border-radius:20;-fx-font-size:12px;"
-            );
+                            "-fx-border-width:1.5;-fx-border-radius:20;-fx-font-size:12px;");
         } else {
             notifBadgeBtn.setText("🔔 Aucune nouvelle");
             notifBadgeBtn.setStyle(
                     "-fx-background-color:transparent;-fx-text-fill:#64748b;" +
                             "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
                             "-fx-background-radius:20;-fx-border-color:#e2e8f0;" +
-                            "-fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"
-            );
+                            "-fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;");
         }
     }
 
-    // ── Helpers extraction créneau ────────────────────────────────
+    // ── Helpers créneau ───────────────────────────────────────────
     private String extraireJour(String info) {
         if (info == null) return "—";
         String[] p = info.split(" ");
@@ -311,7 +283,6 @@ public class EnseignantDashboardController extends BaseController {
             protected void updateItem(String statut, boolean empty) {
                 super.updateItem(statut, empty);
                 if (empty || statut == null) { setText(null); setStyle(""); setGraphic(null); return; }
-
                 String affichage, couleurFond, couleurTexte;
                 switch (statut) {
                     case "PLANIFIE": affichage = "📅 Planifié";  couleurFond = "#dbeafe"; couleurTexte = "#1e40af"; break;
@@ -321,7 +292,6 @@ public class EnseignantDashboardController extends BaseController {
                     case "TERMINE":  affichage = "🏁 Terminé";   couleurFond = "#f3f4f6"; couleurTexte = "#374151"; break;
                     default:         affichage = statut;          couleurFond = "#f1f5f9"; couleurTexte = "#475569";
                 }
-
                 boolean statutFinal = "REALISE".equals(statut) || "ANNULE".equals(statut);
                 Label badge = new Label(affichage + (statutFinal ? "" : "  ▾"));
                 badge.setStyle(
@@ -329,32 +299,24 @@ public class EnseignantDashboardController extends BaseController {
                                 + "-fx-text-fill:" + couleurTexte + ";"
                                 + "-fx-font-size:11px;-fx-font-weight:bold;"
                                 + "-fx-padding:3 8;-fx-background-radius:12;"
-                                + (statutFinal ? "" : "-fx-cursor:hand;")
-                );
-
+                                + (statutFinal ? "" : "-fx-cursor:hand;"));
                 if (!statutFinal) {
                     ContextMenu menu = new ContextMenu();
                     Label lblTitre = new Label("  Changer le statut :");
                     lblTitre.setStyle("-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;");
                     CustomMenuItem headerItem = new CustomMenuItem(lblTitre, false);
                     headerItem.setHideOnClick(false);
-
                     MenuItem itemRealise  = new MenuItem("✅  Marquer comme Réalisé");
                     MenuItem itemAnnule   = new MenuItem("❌  Marquer comme Annulé");
                     MenuItem itemPlanifie = new MenuItem("📅  Remettre en Planifié");
-
                     itemRealise.setOnAction(e  -> changerStatutCours(getTableView().getItems().get(getIndex()), "REALISE"));
                     itemAnnule.setOnAction(e   -> changerStatutCours(getTableView().getItems().get(getIndex()), "ANNULE"));
                     itemPlanifie.setOnAction(e -> changerStatutCours(getTableView().getItems().get(getIndex()), "PLANIFIE"));
-
                     if ("PLANIFIE".equals(statut)) itemPlanifie.setDisable(true);
-
                     menu.getItems().addAll(headerItem, new SeparatorMenuItem(), itemRealise, itemAnnule, new SeparatorMenuItem(), itemPlanifie);
                     badge.setOnMouseClicked(e -> menu.show(badge, e.getScreenX(), e.getScreenY()));
                 }
-
-                setGraphic(badge);
-                setText(null);
+                setGraphic(badge); setText(null);
             }
         });
 
@@ -371,42 +333,31 @@ public class EnseignantDashboardController extends BaseController {
                 }
             }
         });
-
         coursListFiltered.setAll(coursList);
         coursTable.setItems(coursListFiltered);
     }
 
-    // ✅ Changement statut — avec statut final + Gmail + responsable classe
     private void changerStatutCours(Cours cours, String nouveauStatut) {
         if (cours == null) return;
         String ancienStatut = cours.getStatut() != null ? cours.getStatut() : "PLANIFIE";
-
         if ("REALISE".equals(ancienStatut) || "ANNULE".equals(ancienStatut)) {
-            showError("Action impossible",
-                    "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
+            showError("Action impossible", "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
             return;
         }
-
         if (nouveauStatut.equals(ancienStatut)) return;
-
         String motifAnnulation = null;
         if ("ANNULE".equals(nouveauStatut)) {
             motifAnnulation = AlertePersonnalisee.demanderMotifAnnulation(
                     cours.getMatiereNom() + " — " + cours.getClasseNom(),
                     extraireJour(cours.getCreneauInfo()),
                     extraireHeureDebut(cours.getCreneauInfo()),
-                    extraireHeureFin(cours.getCreneauInfo())
-            );
+                    extraireHeureFin(cours.getCreneauInfo()));
             if (motifAnnulation == null) return;
         }
-
         cours.setStatut(nouveauStatut);
         coursDAO.updateStatut(cours.getId(), nouveauStatut);
-
-        // ✅ Si le cours est maintenant REALISE, on le retire des rappels
-        if ("REALISE".equals(nouveauStatut) || "ANNULE".equals(nouveauStatut)) {
+        if ("REALISE".equals(nouveauStatut) || "ANNULE".equals(nouveauStatut))
             coursDejaNotifies.add(cours.getId());
-        }
 
         String icone = "REALISE".equals(nouveauStatut) ? "✅" : "❌";
         final String motifFinal  = motifAnnulation;
@@ -423,7 +374,6 @@ public class EnseignantDashboardController extends BaseController {
                 + " | " + ancienStatut + " → " + nouveauStatut
                 + (motifFinal != null ? " | Motif : " + motifFinal : "");
 
-        // Notifications + emails gestionnaires/admins
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
@@ -434,8 +384,7 @@ public class EnseignantDashboardController extends BaseController {
                     n.setDateEnvoi(LocalDateTime.now());
                     notifDAO.save(n);
                     if ("ANNULE".equals(nouveauStatut) && isGmail(u)) {
-                        EmailService.sendNotification(u,
-                                "❌ Cours annulé — " + matiereNom,
+                        EmailService.sendNotification(u, "❌ Cours annulé — " + matiereNom,
                                 "Bonjour " + u.getNomComplet() + ",\n\n"
                                         + currentUser.getNomComplet() + " a annulé un cours :\n"
                                         + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
@@ -443,30 +392,24 @@ public class EnseignantDashboardController extends BaseController {
                                         + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
                                         + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
                                         + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
-                                        + "  • Motif  : " + motifFinal + "\n\n"
-                                        + "Cordialement,\nUNIV-SCHEDULER"
-                        );
+                                        + "  • Motif  : " + motifFinal + "\n\nCordialement,\nUNIV-SCHEDULER");
                     }
                 });
 
-        // Email responsable classe (un étudiant Gmail)
         if ("ANNULE".equals(nouveauStatut)) {
             new UtilisateurDAO().findAll().stream()
-                    .filter(u -> "ETUDIANT".equals(u.getRole()))
-                    .filter(u -> isGmail(u))
+                    .filter(u -> "ETUDIANT".equals(u.getRole()) && isGmail(u))
                     .findFirst()
-                    .ifPresent(responsable -> EmailService.sendNotification(responsable,
+                    .ifPresent(r -> EmailService.sendNotification(r,
                             "❌ Cours annulé — " + matiereNom + " (" + classeNom + ")",
-                            "Bonjour " + responsable.getNomComplet() + ",\n\n"
+                            "Bonjour " + r.getNomComplet() + ",\n\n"
                                     + "Le cours suivant a été annulé. Merci d'informer vos camarades.\n\n"
                                     + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
                                     + "  • Jour   : " + extraireJour(cours.getCreneauInfo()) + "\n"
                                     + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
                                     + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
                                     + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
-                                    + "  • Motif  : " + motifFinal + "\n\n"
-                                    + "Cordialement,\nUNIV-SCHEDULER"
-                    ));
+                                    + "  • Motif  : " + motifFinal + "\n\nCordialement,\nUNIV-SCHEDULER"));
         }
 
         loadData();
@@ -483,13 +426,9 @@ public class EnseignantDashboardController extends BaseController {
         reservList.setAll(reservDAO.findByUtilisateur(currentUser.getId()));
         notifList.setAll(notifDAO.findByUtilisateur(currentUser.getId()));
         sigList.setAll(sigDAO.findByEnseignant(currentUser.getId()));
-
         if (totalCoursLabel   != null) totalCoursLabel.setText("Mes cours : " + coursList.size());
         if (totalReservsLabel != null) totalReservsLabel.setText("Mes réservations : " + reservList.size());
-
-        // ✅ MODIFIÉ : rafraîchir le bouton badge
         rafraichirBadgeNotif();
-
         long resolus = sigList.stream().filter(s -> "RESOLU".equals(s.getStatut())).count();
         if (sigBadge != null) {
             sigBadge.setText(resolus > 0 ? "✅ " + resolus + " résolu(s)" : "");
@@ -502,17 +441,11 @@ public class EnseignantDashboardController extends BaseController {
     private void buildChipsClasse() {
         if (chipsContainer == null) return;
         chipsContainer.getChildren().clear();
-
         List<String> classes = new ArrayList<>();
         classes.add("TOUTES");
-        coursList.stream()
-                .map(Cours::getClasseNom)
-                .filter(Objects::nonNull)
-                .distinct().sorted()
-                .forEach(classes::add);
-
+        coursList.stream().map(Cours::getClasseNom).filter(Objects::nonNull)
+                .distinct().sorted().forEach(classes::add);
         if (!classes.contains(classeSelectionnee)) classeSelectionnee = "TOUTES";
-
         for (String classe : classes) {
             Button chip = new Button("TOUTES".equals(classe) ? "📚 Toutes" : classe);
             chip.setUserData(classe);
@@ -545,8 +478,7 @@ public class EnseignantDashboardController extends BaseController {
     private void appliquerFiltreClasse() {
         List<Cours> filtered = "TOUTES".equals(classeSelectionnee)
                 ? new ArrayList<>(coursList)
-                : coursList.stream()
-                .filter(c -> classeSelectionnee.equals(c.getClasseNom()))
+                : coursList.stream().filter(c -> classeSelectionnee.equals(c.getClasseNom()))
                 .collect(Collectors.toList());
         coursListFiltered.setAll(filtered);
         if (filtreResultLabel != null)
@@ -556,16 +488,20 @@ public class EnseignantDashboardController extends BaseController {
                     + " cours affiché(s) sur " + coursList.size());
     }
 
-    // ═══════════════════════════ GRAPHIQUE ════════════════════════
+    // ═══════════════════════════ GRAPHIQUE DONUT ══════════════════
     /**
-     * ✅ MODIFIÉ : Graphe camembert avec labels explicites sur chaque portion
-     * (nom + nombre + pourcentage) et couleurs distinctes par statut.
+     * ✅ Donut card style HR dashboard :
+     *  - anneau simulé : PieChart plein + Circle blanc par-dessus
+     *  - centre interactif : % dominant · nom · total au hover
+     *  - légende custom GridPane 2 colonnes : dot · nom · nb · %
+     *  - hover tranche ET hover ligne de légende synchronisés
+     *  - palette teal UNIV-SCHEDULER
      */
     private void buildChart() {
         if (chartEnsContainer == null) return;
         chartEnsContainer.getChildren().clear();
 
-        // Utilise les cours de l'enseignant connecté uniquement
+        // ── Comptage ─────────────────────────────────────────────
         Map<String, Integer> statuts = new LinkedHashMap<>();
         for (Cours c : coursList) {
             String s = c.getStatut() != null ? c.getStatut() : "INCONNU";
@@ -574,57 +510,156 @@ public class EnseignantDashboardController extends BaseController {
 
         if (statuts.isEmpty()) {
             Label vide = new Label("Aucune donnée disponible");
-            vide.setStyle("-fx-text-fill:#94a3b8;-fx-font-style:italic;-fx-font-size:12px;");
+            vide.setStyle("-fx-text-fill:#9eb3bf;-fx-font-style:italic;-fx-font-size:12px;");
             chartEnsContainer.getChildren().add(vide);
             return;
         }
 
-        int total = statuts.values().stream().mapToInt(Integer::intValue).sum();
+        final int total = statuts.values().stream().mapToInt(Integer::intValue).sum();
 
+        // ── Statut dominant (pour le centre par défaut) ───────────
+        final String statutDominant = statuts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey).orElse("");
+        final int countDominant = statuts.getOrDefault(statutDominant, 0);
+        final int pctDominant   = total > 0 ? Math.round(countDominant * 100f / total) : 0;
+        final String nomDominant = LABELS_STATUT.getOrDefault(statutDominant, "—");
+
+        // ── PieChart (le trou est simulé par un Circle blanc) ─────
         PieChart pie = new PieChart();
-        pie.setTitle("Répartition de mes cours (" + total + " total)");
-        pie.setPrefHeight(260);
-        pie.setLabelsVisible(true);   // ✅ Labels visibles sur chaque portion
-        pie.setLegendVisible(true);   // ✅ Légende en bas
-        pie.setStartAngle(90);        // Meilleure lisibilité
+        pie.setLabelsVisible(false);
+        pie.setLegendVisible(false);
+        pie.setStartAngle(90);
+        pie.setPrefSize(180, 180);
+        pie.setMinSize(180, 180);
+        pie.setMaxSize(180, 180);
+        pie.setStyle("-fx-background-color:transparent;");
 
-        // Garder référence statut → data pour colorer après
         List<String> ordreStatuts = new ArrayList<>();
-
         statuts.forEach((statut, count) -> {
-            int pct = total > 0 ? Math.round((count * 100f) / total) : 0;
-            String labelNom = LABELS_STATUT.getOrDefault(statut, statut);
-            // ✅ Label affiché sur la tranche : "✅ Réalisé\n5 cours · 38%"
-            String labelComplet = labelNom + "\n" + count + " cours · " + pct + "%";
-            pie.getData().add(new PieChart.Data(labelComplet, count));
+            pie.getData().add(new PieChart.Data("", count));
             ordreStatuts.add(statut);
         });
 
-        // ✅ Appliquer couleurs + tooltip après que les nœuds sont créés
+        // ── Labels centre (réactifs) ──────────────────────────────
+        Label centerPct = new Label(pctDominant + "%");
+        centerPct.setStyle(
+                "-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+        Label centerNom = new Label(nomDominant);
+        centerNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+        Label centerTotal = new Label(total + " cours");
+        centerTotal.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+
+        VBox centerBox = new VBox(1, centerPct, centerNom, centerTotal);
+        centerBox.setAlignment(Pos.CENTER);
+
+        // ── Circle blanc = trou donut (≈ 68 % du rayon) ──────────
+        Circle hole = new Circle(60, Color.WHITE);
+
+        StackPane donutStack = new StackPane(pie, hole, centerBox);
+        donutStack.setAlignment(Pos.CENTER);
+        donutStack.setPrefSize(186, 186);
+        donutStack.setMaxSize(186, 186);
+
+        // ── Légende GridPane 2 colonnes ───────────────────────────
+        GridPane legendGrid = new GridPane();
+        legendGrid.setHgap(10);
+        legendGrid.setVgap(8);
+        legendGrid.setPadding(new Insets(10, 4, 4, 4));
+        legendGrid.setStyle("-fx-border-color:#e8f4f4;-fx-border-width:1 0 0 0;");
+
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(statuts.entrySet());
+        for (int i = 0; i < entries.size(); i++) {
+            final String statut  = entries.get(i).getKey();
+            final int    count   = entries.get(i).getValue();
+            final int    pct     = total > 0 ? Math.round(count * 100f / total) : 0;
+            final String couleur = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
+            final String nom     = LABELS_STATUT.getOrDefault(statut, statut);
+
+            Circle dot = new Circle(5, Color.web(couleur));
+            Label lblNom = new Label(nom);
+            lblNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+            HBox dotNom = new HBox(5, dot, lblNom);
+            dotNom.setAlignment(Pos.CENTER_LEFT);
+            Label lblNb  = new Label(String.valueOf(count));
+            lblNb.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+            Label lblPct = new Label(pct + "%");
+            lblPct.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+
+            VBox item = new VBox(2, dotNom, lblNb, lblPct);
+            item.setAlignment(Pos.CENTER_LEFT);
+            item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
+
+            item.setOnMouseEntered(e -> {
+                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;" +
+                        "-fx-background-color:#f0f9fa;");
+                centerPct.setText(pct + "%");
+                centerNom.setText(nom);
+                centerTotal.setText(count + " cours");
+            });
+            item.setOnMouseExited(e -> {
+                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
+                centerPct.setText(pctDominant + "%");
+                centerNom.setText(nomDominant);
+                centerTotal.setText(total + " cours");
+            });
+
+            legendGrid.add(item, i % 2, i / 2);
+        }
+
+        // ── Couleurs + hover tranches (après rendu JavaFX) ────────
         Platform.runLater(() -> {
             List<PieChart.Data> dataList = new ArrayList<>(pie.getData());
             for (int i = 0; i < dataList.size() && i < ordreStatuts.size(); i++) {
                 PieChart.Data data = dataList.get(i);
-                String statut = ordreStatuts.get(i);
-                String couleur = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
-                if (data.getNode() != null) {
-                    data.getNode().setStyle("-fx-pie-color: " + couleur + ";");
-                }
-                // Tooltip détaillé au survol
-                Tooltip tooltip = new Tooltip(
-                        LABELS_STATUT.getOrDefault(statut, statut) + "\n"
-                                + data.getPieValue() + " cours"
-                );
-                tooltip.setStyle(
-                        "-fx-font-size:12px;-fx-font-weight:bold;"
-                                + "-fx-background-color:" + couleur + ";-fx-text-fill:white;"
-                                + "-fx-background-radius:6;-fx-padding:6 10;"
-                );
-                Tooltip.install(data.getNode(), tooltip);
+                if (data.getNode() == null) continue;
+                final String statut   = ordreStatuts.get(i);
+                final int    count    = statuts.getOrDefault(statut, 0);
+                final int    pct      = total > 0 ? Math.round(count * 100f / total) : 0;
+                final String couleur  = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
+                final String nom      = LABELS_STATUT.getOrDefault(statut, statut);
+
+                data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
+
+                Tooltip tip = new Tooltip(nom + "\n" + count + " cours · " + pct + "%");
+                tip.setStyle(
+                        "-fx-font-size:12px;-fx-font-weight:bold;" +
+                                "-fx-background-color:" + couleur + ";-fx-text-fill:white;" +
+                                "-fx-background-radius:6;-fx-padding:6 10;");
+                Tooltip.install(data.getNode(), tip);
+
+                data.getNode().setOnMouseEntered(e -> {
+                    data.getNode().setStyle(
+                            "-fx-pie-color:" + couleur +
+                                    ";-fx-scale-x:1.04;-fx-scale-y:1.04;");
+                    centerPct.setText(pct + "%");
+                    centerNom.setText(nom);
+                    centerTotal.setText(count + " cours");
+                });
+                data.getNode().setOnMouseExited(e -> {
+                    data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
+                    centerPct.setText(pctDominant + "%");
+                    centerNom.setText(nomDominant);
+                    centerTotal.setText(total + " cours");
+                });
             }
         });
 
-        chartEnsContainer.getChildren().add(pie);
+        // ── Titre et assemblage carte ─────────────────────────────
+        Label titre = new Label("Statut de mes cours");
+        titre.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+
+        VBox card = new VBox(8, titre, donutStack, legendGrid);
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(14, 12, 12, 12));
+        card.setStyle(
+                "-fx-background-color:white;" +
+                        "-fx-border-color:#c0dde4;-fx-border-width:1;" +
+                        "-fx-background-radius:12;-fx-border-radius:12;");
+        card.setPrefWidth(220);
+        card.setMaxWidth(220);
+
+        chartEnsContainer.getChildren().add(card);
     }
 
     // ═══════════════════════════ RECHERCHE ════════════════════════
@@ -742,7 +777,6 @@ public class EnseignantDashboardController extends BaseController {
         r.setStatut("EN_ATTENTE"); r.setUtilisateurId(currentUser.getId());
         reservDAO.save(r);
         r.setSalleNumero(s.getNumero());
-
         final String hDebFinal = hDeb;
         final int finFinal = fin;
         new UtilisateurDAO().findAll().stream()
@@ -755,10 +789,7 @@ public class EnseignantDashboardController extends BaseController {
                                 + "  • Salle  : " + s.getNumero() + "\n"
                                 + "  • Date   : " + d + "\n"
                                 + "  • Heure  : " + hDebFinal + " → " + finFinal + ":00\n"
-                                + "  • Motif  : " + motif + "\n\n"
-                                + "Cordialement,\nUNIV-SCHEDULER"
-                ));
-
+                                + "  • Motif  : " + motif + "\n\nCordialement,\nUNIV-SCHEDULER"));
         if (motifField          != null) motifField.clear();
         if (salleReservCombo    != null) salleReservCombo.setValue(null);
         if (heureFinReservCombo != null) heureFinReservCombo.setValue("10:00");
@@ -824,10 +855,10 @@ public class EnseignantDashboardController extends BaseController {
     @FXML private void handleSendProbleme() {
         String titre = sigTitreField != null ? sigTitreField.getText().trim() : "";
         if (titre.isEmpty()) { showFeedback("⚠ Veuillez saisir un titre pour le signalement.", false); return; }
-        String    desc      = sigDescArea       != null ? sigDescArea.getText().trim()  : "";
-        String    categorie = sigCategorieCombo != null ? sigCategorieCombo.getValue()  : "AUTRE";
-        String    priorite  = sigPrioriteCombo  != null ? sigPrioriteCombo.getValue()   : "NORMALE";
-        Salle     salle     = sigSalleCombo     != null ? sigSalleCombo.getValue()      : null;
+        String desc      = sigDescArea       != null ? sigDescArea.getText().trim()  : "";
+        String categorie = sigCategorieCombo != null ? sigCategorieCombo.getValue()  : "AUTRE";
+        String priorite  = sigPrioriteCombo  != null ? sigPrioriteCombo.getValue()   : "NORMALE";
+        Salle  salle     = sigSalleCombo     != null ? sigSalleCombo.getValue()      : null;
         Signalement sig = new Signalement();
         sig.setTitre(titre); sig.setDescription(desc);
         sig.setCategorie(categorie != null ? categorie : "AUTRE");
@@ -836,7 +867,6 @@ public class EnseignantDashboardController extends BaseController {
         sig.setDateSignalement(LocalDateTime.now());
         if (salle != null) { sig.setSalleId(salle.getId()); sig.setSalleNumero(salle.getNumero()); }
         sigDAO.save(sig);
-
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
@@ -848,7 +878,6 @@ public class EnseignantDashboardController extends BaseController {
                             + " | Par : " + currentUser.getNomComplet());
                     notifDAO.save(n);
                 });
-
         if (isGmail(currentUser)) {
             EmailService.sendNotification(currentUser,
                     "✅ Signalement #" + sig.getId() + " enregistré",
@@ -857,10 +886,8 @@ public class EnseignantDashboardController extends BaseController {
                             + "  • Titre    : " + sig.getTitre() + "\n"
                             + "  • Priorité : " + sig.getPriorite() + "\n"
                             + "  • Salle    : " + (sig.getSalleNumero() != null ? sig.getSalleNumero() : "—") + "\n\n"
-                            + "Cordialement,\nUNIV-SCHEDULER"
-            );
+                            + "Cordialement,\nUNIV-SCHEDULER");
         }
-
         showFeedback("✅ Signalement #" + sig.getId() + " transmis à l'administration.", true);
         clearSignalementForm(); loadData();
     }
@@ -933,11 +960,11 @@ public class EnseignantDashboardController extends BaseController {
         catch (Exception e) { showError("Erreur", e.getMessage()); }
     }
 
-    @FXML private void handleLogout()  {
+    @FXML private void handleLogout() {
         arreterRappelStatutCours();
         Servicerappel.getInstance().arreter();
         logout();
     }
-    @FXML private void handleRefresh() { loadData(); buildChart(); }
 
+    @FXML private void handleRefresh() { loadData(); buildChart(); }
 }
