@@ -714,4 +714,362 @@ public class AlertePersonnalisee {
                     (int)(c.getRed()*0.82*255), (int)(c.getGreen()*0.82*255), (int)(c.getBlue()*0.82*255));
         } catch (Exception e) { return hex; }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    //  ALERTES EXAMENS & DEVOIRS
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * ✅ Alerte SUCCÈS après soumission d'un examen/devoir.
+     * Affiche les détails complets de ce qui a été envoyé.
+     */
+    public static void examenSoumisAvecSucces(
+            String type, String titre, String classeNom,
+            String matiereNom, String dateExamen, String heure,
+            String salleNumero, int dureeMinutes) {
+
+        Stage fenetre = new Stage();
+        fenetre.initModality(Modality.APPLICATION_MODAL);
+        fenetre.initStyle(StageStyle.TRANSPARENT);
+        fenetre.setResizable(false);
+
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color:transparent;");
+        overlay.setPrefSize(560, 500);
+
+        VBox carte = new VBox(0);
+        carte.setMaxWidth(480);
+        carte.setEffect(ombreCarte());
+        carte.setStyle("-fx-background-color:white;-fx-background-radius:18;");
+
+        // ── Bande teal-dark ───────────────────────────────────────
+        HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
+        bande.setPadding(new Insets(15, 20, 15, 20));
+        bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
+        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
+        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
+        String typeIcon = "EXAMEN".equals(type) ? "📋" : "DEVOIR".equals(type) ? "📝" : "✍️";
+        Label lIco  = new Label(typeIcon + " " + type); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:" + TEAL_LIGHT + ";");
+        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Label lApp  = new Label("UNIV-SCHEDULER"); lApp.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.50);-fx-font-weight:bold;");
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        bande.getChildren().addAll(lLogo, lSep, lIco, esp, lApp, btnX);
+
+        // ── Ligne verte ───────────────────────────────────────────
+        Region ligne = new Region(); ligne.setPrefHeight(4);
+        ligne.setStyle("-fx-background-color:" + GREEN_SOFT + ";");
+
+        // ── Zone succès ───────────────────────────────────────────
+        VBox zoneSucces = new VBox(6);
+        zoneSucces.setAlignment(Pos.CENTER);
+        zoneSucces.setPadding(new Insets(22, 24, 16, 24));
+        zoneSucces.setStyle("-fx-background-color:#f0fdf4;");
+
+        // Cercle vert animé
+        StackPane cercle = new StackPane();
+        Circle bg = new Circle(34); bg.setFill(Color.web(GREEN_BG));
+        bg.setStroke(Color.web(GREEN_SOFT)); bg.setStrokeWidth(2.5);
+        Label check = new Label("✅"); check.setStyle("-fx-font-size:28px;");
+        cercle.getChildren().addAll(bg, check);
+
+        // Animation pop-in
+        cercle.setScaleX(0.3); cercle.setScaleY(0.3);
+        javafx.animation.ScaleTransition pop = new javafx.animation.ScaleTransition(
+                Duration.millis(320), cercle);
+        pop.setFromX(0.3); pop.setFromY(0.3);
+        pop.setToX(1.0);   pop.setToY(1.0);
+        pop.setInterpolator(javafx.animation.Interpolator.SPLINE(0.175, 0.885, 0.320, 1.275));
+        pop.play();
+
+        Label titreSucces = new Label("Demande soumise avec succès !");
+        titreSucces.setStyle("-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + GREEN_TXT + ";");
+        Label sousTitre = new Label("Le gestionnaire a été notifié et traitera votre demande.");
+        sousTitre.setWrapText(true); sousTitre.setTextAlignment(TextAlignment.CENTER);
+        sousTitre.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
+        zoneSucces.getChildren().addAll(cercle, titreSucces, sousTitre);
+
+        // ── Séparateur ────────────────────────────────────────────
+        Region sep = new Region(); sep.setPrefHeight(1);
+        sep.setStyle("-fx-background-color:" + BORDER_LIGHT + ";");
+
+        // ── Récapitulatif ─────────────────────────────────────────
+        VBox recap = new VBox(0);
+        recap.setPadding(new Insets(14, 24, 10, 24));
+        Label titRecap = new Label("Récapitulatif de la demande");
+        titRecap.setPadding(new Insets(0, 0, 8, 0));
+        titRecap.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEXT_SECOND + ";letter-spacing:0.05em;");
+
+        String salle = (salleNumero != null && !salleNumero.isBlank()) ? salleNumero : "Devoir à la maison";
+        String duree = dureeMinutes + " min";
+
+        String[][] lignes = {
+                {"📋 Type",    typeIcon + " " + (type != null ? type : "—")},
+                {"📌 Titre",   titre    != null ? titre   : "—"},
+                {"🎓 Classe",  classeNom != null ? classeNom : "—"},
+                {"📚 Matière", matiereNom != null ? matiereNom : "—"},
+                {"📅 Date",    (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
+                {"⏱ Durée",   duree},
+                {"🏫 Salle",   salle},
+        };
+
+        VBox grille = new VBox(0);
+        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;"
+                + "-fx-border-color:" + BORDER_LIGHT + ";-fx-border-radius:10;-fx-border-width:1;");
+        for (int i = 0; i < lignes.length; i++) {
+            HBox rangee = new HBox(0); rangee.setPadding(new Insets(9, 14, 9, 14));
+            rangee.setStyle("-fx-background-color:" + (i % 2 == 0 ? "white" : ROW_ALT) + ";"
+                    + (i == 0 ? "-fx-background-radius:10 10 0 0;" : "")
+                    + (i == lignes.length - 1 ? "-fx-background-radius:0 0 10 10;" : ""));
+            Label cle = new Label(lignes[i][0]); cle.setMinWidth(100);
+            cle.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-weight:bold;");
+            Label val = new Label(lignes[i][1]); val.setWrapText(true); val.setMaxWidth(290);
+            val.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEAL_DARK + ";-fx-font-weight:bold;");
+            rangee.getChildren().addAll(cle, val);
+            grille.getChildren().add(rangee);
+        }
+        recap.getChildren().addAll(titRecap, grille);
+
+        // ── Info badge ────────────────────────────────────────────
+        HBox infoBadge = new HBox(8); infoBadge.setAlignment(Pos.CENTER_LEFT);
+        infoBadge.setPadding(new Insets(10, 24, 4, 24));
+        Label infoIco = new Label("🔔"); infoIco.setStyle("-fx-font-size:14px;");
+        Label infoTxt = new Label("Vous recevrez une notification dès que le gestionnaire aura traité votre demande.");
+        infoTxt.setWrapText(true); infoTxt.setMaxWidth(380);
+        infoTxt.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;");
+        infoBadge.getChildren().addAll(infoIco, infoTxt);
+
+        // ── Bouton fermer ─────────────────────────────────────────
+        HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
+        zoneFermer.setPadding(new Insets(12, 24, 18, 24));
+        zoneFermer.setStyle("-fx-background-color:#f0fdf4;-fx-background-radius:0 0 18 18;");
+        Button btnFermer = creerBouton("  Parfait ! ✓  ", GREEN_SOFT, "white", "#2aaf72");
+        btnFermer.setOnAction(e -> fenetre.close());
+        zoneFermer.getChildren().add(btnFermer);
+
+        carte.getChildren().addAll(bande, ligne, zoneSucces, sep, recap, infoBadge, zoneFermer);
+        overlay.getChildren().add(carte);
+        animerEtAfficher(carte, fenetre);
+    }
+
+    /**
+     * ❌ Alerte VALIDATION MANQUANTE — liste les champs vides.
+     */
+    public static void examenChampsManquants(List<String> champsManquants) {
+        Stage fenetre = new Stage();
+        fenetre.initModality(Modality.APPLICATION_MODAL);
+        fenetre.initStyle(StageStyle.TRANSPARENT);
+        fenetre.setResizable(false);
+
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color:transparent;");
+        overlay.setPrefSize(480, 380);
+
+        VBox carte = new VBox(0);
+        carte.setMaxWidth(420);
+        carte.setEffect(ombreCarte());
+        carte.setStyle("-fx-background-color:white;-fx-background-radius:18;");
+
+        HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
+        bande.setPadding(new Insets(15, 20, 15, 20));
+        bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
+        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
+        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
+        Label lIco  = new Label("⚠️ Champs manquants"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+
+        Region ligne = new Region(); ligne.setPrefHeight(4);
+        ligne.setStyle("-fx-background-color:" + GOLD + ";");
+
+        // Zone icône + message
+        VBox zoneWarn = new VBox(8); zoneWarn.setAlignment(Pos.CENTER);
+        zoneWarn.setPadding(new Insets(20, 24, 14, 24));
+        zoneWarn.setStyle("-fx-background-color:" + GOLD_BG + ";");
+
+        StackPane cercle = new StackPane();
+        Circle bg = new Circle(30); bg.setFill(Color.web(GOLD_BG));
+        bg.setStroke(Color.web(GOLD)); bg.setStrokeWidth(2.5);
+        Label icoWarn = new Label("⚠️"); icoWarn.setStyle("-fx-font-size:24px;");
+        cercle.getChildren().addAll(bg, icoWarn);
+
+        Label titWarn = new Label("Formulaire incomplet");
+        titWarn.setStyle("-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";");
+        Label sousWarn = new Label("Veuillez remplir les champs obligatoires (*) :");
+        sousWarn.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
+        zoneWarn.getChildren().addAll(cercle, titWarn, sousWarn);
+
+        // Liste des champs manquants
+        VBox listeCh = new VBox(6); listeCh.setPadding(new Insets(14, 24, 14, 24));
+        for (String champ : champsManquants) {
+            HBox row = new HBox(10); row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new Insets(8, 12, 8, 12));
+            row.setStyle("-fx-background-color:" + RED_BG + ";-fx-background-radius:8;"
+                    + "-fx-border-color:" + RED_BORDER + ";-fx-border-radius:8;-fx-border-width:1;");
+            Label dot = new Label("●"); dot.setStyle("-fx-text-fill:" + RED_SOFT + ";-fx-font-size:10px;");
+            Label lbl = new Label(champ); lbl.setStyle("-fx-font-size:13px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;");
+            row.getChildren().addAll(dot, lbl);
+            listeCh.getChildren().add(row);
+        }
+
+        HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
+        zoneFermer.setPadding(new Insets(12, 24, 18, 24));
+        zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
+        Button btnOk = creerBouton("  Corriger les champs  ", TEAL_MID, "white", TEAL_DARK);
+        btnOk.setOnAction(e -> fenetre.close());
+        zoneFermer.getChildren().add(btnOk);
+
+        carte.getChildren().addAll(bande, ligne, zoneWarn, listeCh, zoneFermer);
+        overlay.getChildren().add(carte);
+        animerEtAfficher(carte, fenetre);
+    }
+
+    /**
+     * 🔴 Alerte CONFLIT SALLE détecté.
+     */
+    public static void examenConflitSalle(String salleNumero, String dateExamen, String heure) {
+        Stage fenetre = new Stage();
+        fenetre.initModality(Modality.APPLICATION_MODAL);
+        fenetre.initStyle(StageStyle.TRANSPARENT);
+        fenetre.setResizable(false);
+
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color:transparent;");
+        overlay.setPrefSize(500, 380);
+
+        VBox carte = new VBox(0);
+        carte.setMaxWidth(430);
+        carte.setEffect(ombreCarte());
+        carte.setStyle("-fx-background-color:white;-fx-background-radius:18;");
+
+        HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
+        bande.setPadding(new Insets(15, 20, 15, 20));
+        bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
+        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
+        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
+        Label lIco  = new Label("🔴 Conflit de Salle"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+
+        Region ligne = new Region(); ligne.setPrefHeight(4);
+        ligne.setStyle("-fx-background-color:" + RED_SOFT + ";");
+
+        VBox zoneErr = new VBox(10); zoneErr.setAlignment(Pos.CENTER);
+        zoneErr.setPadding(new Insets(22, 24, 16, 24));
+        zoneErr.setStyle("-fx-background-color:" + RED_BG + ";");
+
+        StackPane cercle = new StackPane();
+        Circle bg = new Circle(32); bg.setFill(Color.web(RED_BG));
+        bg.setStroke(Color.web(RED_SOFT)); bg.setStrokeWidth(2.5);
+
+        // Shake animation
+        TranslateTransition shake = new TranslateTransition(Duration.millis(60), cercle);
+        shake.setFromX(-6); shake.setToX(6); shake.setCycleCount(6);
+        shake.setAutoReverse(true); shake.play();
+
+        Label icoErr = new Label("❌"); icoErr.setStyle("-fx-font-size:26px;");
+        cercle.getChildren().addAll(bg, icoErr);
+
+        Label titErr = new Label("Salle déjà occupée !");
+        titErr.setStyle("-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + RED_TXT + ";");
+        Label sousErr = new Label("La salle est indisponible pour ce créneau.");
+        sousErr.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
+        zoneErr.getChildren().addAll(cercle, titErr, sousErr);
+
+        // Infos conflit
+        VBox details = new VBox(0); details.setPadding(new Insets(14, 24, 14, 24));
+        String[][] infos = {
+                {"🏫 Salle", salleNumero != null ? salleNumero : "—"},
+                {"📅 Date",  (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
+        };
+        VBox grille = new VBox(0);
+        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;"
+                + "-fx-border-color:" + RED_BORDER + ";-fx-border-radius:10;-fx-border-width:1;");
+        for (int i = 0; i < infos.length; i++) {
+            HBox row = new HBox(0); row.setPadding(new Insets(10, 14, 10, 14));
+            row.setStyle("-fx-background-color:" + (i % 2 == 0 ? "white" : "#fff5f5") + ";"
+                    + (i == 0 ? "-fx-background-radius:10 10 0 0;" : "-fx-background-radius:0 0 10 10;"));
+            Label c = new Label(infos[i][0]); c.setMinWidth(80);
+            c.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-weight:bold;");
+            Label v = new Label(infos[i][1]); v.setStyle("-fx-font-size:12px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;");
+            row.getChildren().addAll(c, v); grille.getChildren().add(row);
+        }
+
+        HBox conseil = new HBox(8); conseil.setAlignment(Pos.CENTER_LEFT);
+        conseil.setPadding(new Insets(10, 0, 0, 0));
+        Label conseilIco = new Label("💡"); conseilIco.setStyle("-fx-font-size:14px;");
+        Label conseilTxt = new Label("Choisissez une autre salle ou une autre date/heure.");
+        conseilTxt.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;");
+        conseil.getChildren().addAll(conseilIco, conseilTxt);
+
+        details.getChildren().addAll(grille, conseil);
+
+        HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
+        zoneFermer.setPadding(new Insets(12, 24, 18, 24));
+        zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
+        Button btnOk = creerBouton("  Modifier le formulaire  ", RED_SOFT, "white", "#c44040");
+        btnOk.setOnAction(e -> fenetre.close());
+        zoneFermer.getChildren().add(btnOk);
+
+        carte.getChildren().addAll(bande, ligne, zoneErr, details, zoneFermer);
+        overlay.getChildren().add(carte);
+        animerEtAfficher(carte, fenetre);
+    }
+
+    /**
+     * 📅 Alerte DATE PASSÉE.
+     */
+    public static void examenDatePassee(String dateChoisie) {
+        Stage fenetre = new Stage();
+        fenetre.initModality(Modality.APPLICATION_MODAL);
+        fenetre.initStyle(StageStyle.TRANSPARENT);
+        fenetre.setResizable(false);
+
+        StackPane overlay = new StackPane();
+        overlay.setStyle("-fx-background-color:transparent;");
+        overlay.setPrefSize(460, 320);
+
+        VBox carte = new VBox(0);
+        carte.setMaxWidth(400);
+        carte.setEffect(ombreCarte());
+        carte.setStyle("-fx-background-color:white;-fx-background-radius:18;");
+
+        HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
+        bande.setPadding(new Insets(15, 20, 15, 20));
+        bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
+        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
+        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
+        Label lIco  = new Label("📅 Date invalide"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+
+        Region ligne = new Region(); ligne.setPrefHeight(4);
+        ligne.setStyle("-fx-background-color:" + GOLD + ";");
+
+        VBox corps = new VBox(14); corps.setAlignment(Pos.CENTER);
+        corps.setPadding(new Insets(28, 28, 20, 28));
+        corps.setStyle("-fx-background-color:" + GOLD_BG + ";");
+
+        Label ico = new Label("📅"); ico.setStyle("-fx-font-size:40px;");
+        Label tit = new Label("Date dans le passé");
+        tit.setStyle("-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";");
+        Label msg = new Label("La date sélectionnée (" + (dateChoisie != null ? dateChoisie : "—")
+                + ") est déjà passée.\nVeuillez choisir une date future.");
+        msg.setWrapText(true); msg.setTextAlignment(TextAlignment.CENTER);
+        msg.setStyle("-fx-font-size:13px;-fx-text-fill:" + TEXT_SECOND + ";");
+        corps.getChildren().addAll(ico, tit, msg);
+
+        HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
+        zoneFermer.setPadding(new Insets(12, 24, 18, 24));
+        zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
+        Button btnOk = creerBouton("  Choisir une autre date  ", GOLD, "white", "#c87f00");
+        btnOk.setOnAction(e -> fenetre.close());
+        zoneFermer.getChildren().add(btnOk);
+
+        carte.getChildren().addAll(bande, ligne, corps, zoneFermer);
+        overlay.getChildren().add(carte);
+        animerEtAfficher(carte, fenetre);
+    }
 }

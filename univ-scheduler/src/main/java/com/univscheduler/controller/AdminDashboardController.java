@@ -3,6 +3,7 @@ package com.univscheduler.controller;
 import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
 import com.univscheduler.model.AlertePersonnalisee;
+import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.collections.*;
 import javafx.fxml.FXML;
@@ -13,12 +14,13 @@ import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import java.util.List;
-import java.util.Map;
+import javafx.scene.shape.Circle;
+import java.util.*;
 
 public class AdminDashboardController extends BaseController {
 
-    // ── Palette ───────────────────────────────────────────────────
+    // ── Palette UNIV-SCHEDULER ────────────────────────────────────
+    private static final String T_DARK   = "#1a5f6e";
     private static final String T_MID    = "#2a9cb0";
     private static final String T_LIGHT  = "#4ecdc4";
     private static final String GREEN    = "#3ecf8e";
@@ -27,6 +29,13 @@ public class AdminDashboardController extends BaseController {
     private static final String PURPLE   = "#7c6fcf";
     private static final String MUTED    = "#9eb3bf";
     private static final String SECOND   = "#6b8394";
+
+    // ── Couleurs donut Salles par Type ────────────────────────────
+    private static final Map<String, String> COULEURS_TYPE = Map.of(
+            "TD",    "#2a9cb0",   // teal mid
+            "TP",    "#4ecdc4",   // teal light
+            "AMPHI", "#1a5f6e"    // teal dark
+    );
 
     // ── FXML ──────────────────────────────────────────────────────
     @FXML private Label welcomeLabel;
@@ -106,26 +115,21 @@ public class AdminDashboardController extends BaseController {
         if (statCardsContainer == null) return;
         statCardsContainer.getChildren().clear();
 
-        // ── Utilisateurs ──────────────────────────────────────────
         long nbAdmin = utilisateurDAO.countByRole("ADMIN");
         long nbGest  = utilisateurDAO.countByRole("GESTIONNAIRE");
         long nbEns   = utilisateurDAO.countByRole("ENSEIGNANT");
         long nbEtu   = utilisateurDAO.countByRole("ETUDIANT");
 
-        // ── Salles — types ────────────────────────────────────────
         List<Salle> salles = salleDAO.findAll();
         long nbTD    = salles.stream().filter(s -> "TD".equalsIgnoreCase(s.getTypeSalle())).count();
         long nbTP    = salles.stream().filter(s -> "TP".equalsIgnoreCase(s.getTypeSalle())).count();
         long nbAmphi = salles.stream().filter(s -> "AMPHI".equalsIgnoreCase(s.getTypeSalle())).count();
 
-        // ── Salles — disponibilité RÉELLE via SQL ─────────────────
-        // countLibresAujourdhui() exclut les salles avec cours planifié/en cours aujourd'hui
         Map<String, Long> dispoDetail = salleDAO.getDisponibiliteDetail();
         long nbLibres      = dispoDetail.getOrDefault("libres",      0L);
         long nbOccupees    = dispoDetail.getOrDefault("occupees",    0L);
         long nbMaintenance = dispoDetail.getOrDefault("maintenance", 0L);
 
-        // ── Cours ─────────────────────────────────────────────────
         List<Cours> cours = coursDAO.findAll();
         long nbPlanif  = cours.stream().filter(c -> "PLANIFIE".equalsIgnoreCase(c.getStatut())).count();
         long nbRealise = cours.stream().filter(c -> "TERMINE".equalsIgnoreCase(c.getStatut())
@@ -134,14 +138,12 @@ public class AdminDashboardController extends BaseController {
         String tauxAnnulation = kpiCours > 0
                 ? String.format("%.0f%%", nbAnnule * 100.0 / kpiCours) : "—";
 
-        // ── Bâtiments ─────────────────────────────────────────────
         List<Batiment> bats = batimentDAO.findAll();
         long kpiBats       = bats.size();
         long nbEtagesTotal = bats.stream().mapToLong(Batiment::getNombreEtages).sum();
         String moyParBat   = kpiBats > 0
                 ? String.format("%.1f", (double) kpiSalles / kpiBats) : "—";
 
-        // ── Equipements ───────────────────────────────────────────
         List<Equipement> equips = equipementDAO.findAll();
         long kpiEquips    = equips.size();
         long nbEquipDispo = equips.stream().filter(Equipement::isDisponible).count();
@@ -151,7 +153,6 @@ public class AdminDashboardController extends BaseController {
         long nbOrdinateur = equips.stream().filter(e -> "ORDINATEUR".equalsIgnoreCase(e.getTypeEquipement())).count();
         long nbAutre      = Math.max(0, kpiEquips - nbProjecteur - nbTableau - nbOrdinateur);
 
-        // ════════ CARTE 1 : Utilisateurs (teal) ════════
         statCardsContainer.getChildren().add(buildCard(
                 "UTILISATEURS", String.valueOf(kpiUsers),
                 "Admin · Gest. · Ens. · Etud.", "👥", T_MID,
@@ -164,7 +165,6 @@ public class AdminDashboardController extends BaseController {
                 })
         ));
 
-        // ════════ CARTE 2 : Salles (vert) — disponibilité réelle ════════
         statCardsContainer.getChildren().add(buildCard(
                 "SALLES", String.valueOf(kpiSalles),
                 "Libres auj. : " + nbLibres + " / " + kpiSalles, "🏫", GREEN,
@@ -179,7 +179,6 @@ public class AdminDashboardController extends BaseController {
                 })
         ));
 
-        // ════════ CARTE 3 : Cours planifiés (or) ════════
         statCardsContainer.getChildren().add(buildCard(
                 "COURS PLANIFIES", String.valueOf(nbPlanif),
                 "Sur " + kpiCours + " cours total", "📅", GOLD,
@@ -192,7 +191,6 @@ public class AdminDashboardController extends BaseController {
                 })
         ));
 
-        // ════════ CARTE 4 : Bâtiments (violet) ════════
         statCardsContainer.getChildren().add(buildCard(
                 "BATIMENTS", String.valueOf(kpiBats),
                 "Bâtiments du campus", "🏢", PURPLE,
@@ -204,7 +202,6 @@ public class AdminDashboardController extends BaseController {
                 })
         ));
 
-        // ════════ CARTE 5 : Equipements (rouge) ════════
         statCardsContainer.getChildren().add(buildCard(
                 "EQUIPEMENTS", String.valueOf(kpiEquips),
                 "Matériel des salles", "🔧", RED,
@@ -220,13 +217,11 @@ public class AdminDashboardController extends BaseController {
         ));
     }
 
-    // ─────────────────────────────────────────────────────────────────
     private VBox buildCard(String label, String value, String subtitle,
                            String icon, String color, Runnable onClick) {
         VBox card = new VBox(10);
         card.setPadding(new Insets(20, 22, 20, 22));
         HBox.setHgrow(card, Priority.ALWAYS);
-
         String styleBase =
                 "-fx-background-color:white;" +
                         "-fx-background-radius:16;" +
@@ -235,11 +230,9 @@ public class AdminDashboardController extends BaseController {
                         "-fx-border-radius:16;" +
                         "-fx-cursor:hand;";
         card.setStyle(styleBase);
-
         DropShadow shadow = new DropShadow(12, Color.color(0, 0, 0, 0.07));
         shadow.setOffsetY(3);
         card.setEffect(shadow);
-
         HBox topRow = new HBox(); topRow.setAlignment(Pos.CENTER_LEFT);
         Label labelLbl = new Label(label);
         labelLbl.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:" + SECOND + ";");
@@ -247,15 +240,11 @@ public class AdminDashboardController extends BaseController {
         Label iconLbl = new Label(icon);
         iconLbl.setStyle("-fx-font-size:28px;-fx-opacity:0.18;");
         topRow.getChildren().addAll(labelLbl, spacer, iconLbl);
-
         Label valueLbl = new Label(value);
         valueLbl.setStyle("-fx-font-size:42px;-fx-font-weight:bold;-fx-text-fill:" + color + ";");
-
         Label subtitleLbl = new Label(subtitle);
         subtitleLbl.setStyle("-fx-font-size:11px;-fx-text-fill:" + MUTED + ";");
-
         card.getChildren().addAll(topRow, valueLbl, subtitleLbl);
-
         DropShadow hoverShadow = new DropShadow(20, Color.web(color, 0.18));
         hoverShadow.setOffsetY(5);
         card.setOnMouseEntered(e -> { card.setStyle(styleBase.replace("white","#f7fcfd")); card.setEffect(hoverShadow); });
@@ -326,49 +315,235 @@ public class AdminDashboardController extends BaseController {
         equipList.setAll(equipementDAO.findAll());
         salleBatCombo.setItems(FXCollections.observableArrayList(batimentDAO.findAll()));
         equipSalleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
-
         kpiUsers  = userList.size();
         kpiSalles = salleList.size();
         kpiCours  = coursDAO.count();
-
         buildStatCards();
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Charts
+    //  Charts — dont le donut Salles par Type style HR dashboard
     // ════════════════════════════════════════════════════════════════
 
     private void buildCharts() {
-        if (chartUsersContainer != null) {
-            CategoryAxis xA=new CategoryAxis(); NumberAxis yA=new NumberAxis();
-            xA.setLabel("Rôle"); yA.setLabel("Nombre");
-            BarChart<String,Number> bar=new BarChart<>(xA,yA);
-            bar.setTitle("👥 Utilisateurs par Rôle"); bar.setLegendVisible(false); bar.setPrefHeight(220);
-            bar.setStyle("-fx-background-color:transparent;");
-            XYChart.Series<String,Number> s=new XYChart.Series<>();
-            utilisateurDAO.countByAllRoles().forEach((k,v)->s.getData().add(new XYChart.Data<>(k,v)));
-            bar.getData().add(s);
-            bar.getData().get(0).getData().forEach(d->{if(d.getNode()!=null)d.getNode().setStyle("-fx-bar-fill:"+T_MID+";-fx-background-radius:6 6 2 2;");});
-            chartUsersContainer.getChildren().setAll(bar);
+        buildChartUsers();
+        buildChartSallesDonut();   // ✅ NOUVEAU donut
+        buildChartCours();
+    }
+
+    // ── Graphe 1 : Utilisateurs par Rôle (BarChart) ───────────────
+    private void buildChartUsers() {
+        if (chartUsersContainer == null) return;
+        CategoryAxis xA = new CategoryAxis(); NumberAxis yA = new NumberAxis();
+        xA.setLabel("Rôle"); yA.setLabel("Nombre");
+        BarChart<String, Number> bar = new BarChart<>(xA, yA);
+        bar.setTitle("👥 Utilisateurs par Rôle");
+        bar.setLegendVisible(false);
+        bar.setPrefHeight(220);
+        bar.setStyle("-fx-background-color:transparent;");
+        XYChart.Series<String, Number> s = new XYChart.Series<>();
+        utilisateurDAO.countByAllRoles().forEach((k, v) ->
+                s.getData().add(new XYChart.Data<>(k, v)));
+        bar.getData().add(s);
+        bar.getData().get(0).getData().forEach(d -> {
+            if (d.getNode() != null)
+                d.getNode().setStyle("-fx-bar-fill:" + T_MID + ";-fx-background-radius:6 6 2 2;");
+        });
+        chartUsersContainer.getChildren().setAll(bar);
+    }
+
+    // ── Graphe 2 : Salles par Type — DONUT card style HR dashboard ─
+    /**
+     * ✅ Même technique que le donut enseignant :
+     *   - PieChart plein + Circle blanc par-dessus = anneau
+     *   - Centre interactif : % type dominant · nom · total
+     *   - Légende GridPane 2 colonnes : dot · nom · nb · %
+     *   - Hover tranche ET hover légende synchronisés
+     *   - Palette teal UNIV-SCHEDULER
+     */
+    private void buildChartSallesDonut() {
+        if (chartSallesContainer == null) return;
+        chartSallesContainer.getChildren().clear();
+
+        // ── Données ───────────────────────────────────────────────
+        Map<String, Integer> typesRaw = salleDAO.countByType();
+        // Convertir en LinkedHashMap<String,Integer> trié TD → TP → AMPHI
+        Map<String, Integer> types = new LinkedHashMap<>();
+        for (String key : new String[]{"TD", "TP", "AMPHI"}) {
+            if (typesRaw.containsKey(key)) types.put(key, typesRaw.get(key).intValue());
         }
-        if (chartSallesContainer != null) {
-            PieChart pie=new PieChart(); pie.setTitle("🏫 Salles par Type"); pie.setPrefHeight(220);
-            pie.setStyle("-fx-background-color:transparent;");
-            salleDAO.countByType().forEach((k,v)->pie.getData().add(new PieChart.Data(k+" ("+v+")",v)));
-            chartSallesContainer.getChildren().setAll(pie);
+        // Ajouter les types inconnus éventuels
+        typesRaw.forEach((k, v) -> { if (!types.containsKey(k)) types.put(k, v); });
+
+        if (types.isEmpty()) {
+            Label vide = new Label("Aucune donnée disponible");
+            vide.setStyle("-fx-text-fill:#9eb3bf;-fx-font-style:italic;-fx-font-size:12px;");
+            chartSallesContainer.getChildren().add(vide);
+            return;
         }
-        if (chartCoursContainer != null) {
-            CategoryAxis xA=new CategoryAxis(); NumberAxis yA=new NumberAxis();
-            xA.setLabel("Jour"); yA.setLabel("Cours");
-            BarChart<String,Number> bar=new BarChart<>(xA,yA);
-            bar.setTitle("📅 Cours par Jour"); bar.setLegendVisible(false); bar.setPrefHeight(260);
-            bar.setStyle("-fx-background-color:transparent;");
-            XYChart.Series<String,Number> s=new XYChart.Series<>();
-            coursDAO.countByJour().forEach((k,v)->s.getData().add(new XYChart.Data<>(k,v)));
-            bar.getData().add(s);
-            bar.getData().get(0).getData().forEach(d->{if(d.getNode()!=null)d.getNode().setStyle("-fx-bar-fill:"+T_LIGHT+";-fx-background-radius:6 6 2 2;");});
-            chartCoursContainer.getChildren().setAll(bar);
+
+        final int total = types.values().stream().mapToInt(Integer::intValue).sum();
+
+        // ── Type dominant pour le centre par défaut ───────────────
+        final String typeDominant = types.entrySet().stream()
+                .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("");
+        final int countDominant = types.getOrDefault(typeDominant, 0);
+        final int pctDominant   = total > 0 ? Math.round(countDominant * 100f / total) : 0;
+        final String nomDominant = typeDominant;
+
+        // ── PieChart ──────────────────────────────────────────────
+        PieChart pie = new PieChart();
+        pie.setLabelsVisible(false);
+        pie.setLegendVisible(false);
+        pie.setStartAngle(90);
+        pie.setPrefSize(180, 180);
+        pie.setMinSize(180, 180);
+        pie.setMaxSize(180, 180);
+        pie.setStyle("-fx-background-color:transparent;");
+
+        List<String> ordreTypes = new ArrayList<>();
+        types.forEach((type, count) -> {
+            pie.getData().add(new PieChart.Data("", count));
+            ordreTypes.add(type);
+        });
+
+        // ── Labels centre ─────────────────────────────────────────
+        Label centerPct = new Label(pctDominant + "%");
+        centerPct.setStyle("-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+        Label centerNom = new Label(nomDominant);
+        centerNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+        Label centerTotal = new Label(total + " salles");
+        centerTotal.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+
+        VBox centerBox = new VBox(1, centerPct, centerNom, centerTotal);
+        centerBox.setAlignment(Pos.CENTER);
+
+        // ── Trou du donut ─────────────────────────────────────────
+        Circle hole = new Circle(60, Color.WHITE);
+
+        StackPane donutStack = new StackPane(pie, hole, centerBox);
+        donutStack.setAlignment(Pos.CENTER);
+        donutStack.setPrefSize(186, 186);
+        donutStack.setMaxSize(186, 186);
+
+        // ── Légende GridPane 2 colonnes ───────────────────────────
+        GridPane legendGrid = new GridPane();
+        legendGrid.setHgap(10);
+        legendGrid.setVgap(8);
+        legendGrid.setPadding(new Insets(10, 4, 4, 4));
+        legendGrid.setStyle("-fx-border-color:#e8f4f4;-fx-border-width:1 0 0 0;");
+
+        List<Map.Entry<String, Integer>> entries = new ArrayList<>(types.entrySet());
+        for (int i = 0; i < entries.size(); i++) {
+            final String type    = entries.get(i).getKey();
+            final int    count   = entries.get(i).getValue();
+            final int    pct     = total > 0 ? Math.round(count * 100f / total) : 0;
+            final String couleur = COULEURS_TYPE.getOrDefault(type, "#9eb3bf");
+
+            Circle dot = new Circle(5, Color.web(couleur));
+            Label lblNom = new Label(type);
+            lblNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+            HBox dotNom = new HBox(5, dot, lblNom);
+            dotNom.setAlignment(Pos.CENTER_LEFT);
+            Label lblNb  = new Label(String.valueOf(count));
+            lblNb.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+            Label lblPct = new Label(pct + "%");
+            lblPct.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+
+            VBox item = new VBox(2, dotNom, lblNb, lblPct);
+            item.setAlignment(Pos.CENTER_LEFT);
+            item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
+
+            item.setOnMouseEntered(e -> {
+                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;" +
+                        "-fx-background-color:#f0f9fa;");
+                centerPct.setText(pct + "%");
+                centerNom.setText(type);
+                centerTotal.setText(count + " salles");
+            });
+            item.setOnMouseExited(e -> {
+                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
+                centerPct.setText(pctDominant + "%");
+                centerNom.setText(nomDominant);
+                centerTotal.setText(total + " salles");
+            });
+
+            legendGrid.add(item, i % 2, i / 2);
         }
+
+        // ── Couleurs + hover tranches ─────────────────────────────
+        Platform.runLater(() -> {
+            List<PieChart.Data> dataList = new ArrayList<>(pie.getData());
+            for (int i = 0; i < dataList.size() && i < ordreTypes.size(); i++) {
+                PieChart.Data data = dataList.get(i);
+                if (data.getNode() == null) continue;
+                final String type    = ordreTypes.get(i);
+                final int    count   = types.getOrDefault(type, 0);
+                final int    pct     = total > 0 ? Math.round(count * 100f / total) : 0;
+                final String couleur = COULEURS_TYPE.getOrDefault(type, "#9eb3bf");
+
+                data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
+
+                Tooltip tip = new Tooltip(type + "\n" + count + " salles · " + pct + "%");
+                tip.setStyle(
+                        "-fx-font-size:12px;-fx-font-weight:bold;" +
+                                "-fx-background-color:" + couleur + ";-fx-text-fill:white;" +
+                                "-fx-background-radius:6;-fx-padding:6 10;");
+                Tooltip.install(data.getNode(), tip);
+
+                data.getNode().setOnMouseEntered(e -> {
+                    data.getNode().setStyle(
+                            "-fx-pie-color:" + couleur +
+                                    ";-fx-scale-x:1.04;-fx-scale-y:1.04;");
+                    centerPct.setText(pct + "%");
+                    centerNom.setText(type);
+                    centerTotal.setText(count + " salles");
+                });
+                data.getNode().setOnMouseExited(e -> {
+                    data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
+                    centerPct.setText(pctDominant + "%");
+                    centerNom.setText(nomDominant);
+                    centerTotal.setText(total + " salles");
+                });
+            }
+        });
+
+        // ── Titre + assemblage carte ──────────────────────────────
+        Label titre = new Label("Types de Salles");
+        titre.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+
+        VBox card = new VBox(8, titre, donutStack, legendGrid);
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPadding(new Insets(14, 12, 12, 12));
+        card.setStyle(
+                "-fx-background-color:white;" +
+                        "-fx-border-color:#c0dde4;-fx-border-width:1;" +
+                        "-fx-background-radius:12;-fx-border-radius:12;");
+        card.setPrefWidth(220);
+        card.setMaxWidth(220);
+
+        chartSallesContainer.getChildren().add(card);
+    }
+
+    // ── Graphe 3 : Cours par Jour (BarChart) ─────────────────────
+    private void buildChartCours() {
+        if (chartCoursContainer == null) return;
+        CategoryAxis xA = new CategoryAxis(); NumberAxis yA = new NumberAxis();
+        xA.setLabel("Jour"); yA.setLabel("Cours");
+        BarChart<String, Number> bar = new BarChart<>(xA, yA);
+        bar.setTitle("📅 Cours par Jour");
+        bar.setLegendVisible(false);
+        bar.setPrefHeight(260);
+        bar.setStyle("-fx-background-color:transparent;");
+        XYChart.Series<String, Number> s = new XYChart.Series<>();
+        coursDAO.countByJour().forEach((k, v) ->
+                s.getData().add(new XYChart.Data<>(k, v)));
+        bar.getData().add(s);
+        bar.getData().get(0).getData().forEach(d -> {
+            if (d.getNode() != null)
+                d.getNode().setStyle("-fx-bar-fill:" + T_LIGHT + ";-fx-background-radius:6 6 2 2;");
+        });
+        chartCoursContainer.getChildren().setAll(bar);
     }
 
     // ════════════════════════════════════════════════════════════════

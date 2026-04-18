@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.EtudiantDashboardController"
             styleClass="root-pane">
@@ -11,17 +12,26 @@
 
     <top>
         <HBox styleClass="navbar" alignment="CENTER_LEFT" spacing="16">
-            <Label text="🎓 UNIV-SCHEDULER" styleClass="nav-logo"/>
+            <Label text="UNIV-SCHEDULER" styleClass="nav-logo"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="Étudiant" styleClass="nav-role-badge-teal"/>
-            <Label fx:id="notifBadge" text="🔔" styleClass="nav-user"/>
+            <Label text="Etudiant" styleClass="nav-role-badge-teal"/>
+
+            <!-- ✅ CORRIGE : notifBadge est maintenant un BUTTON cliquable -->
+            <Button fx:id="notifBadgeBtn"
+                    text="Aucune nouvelle"
+                    onAction="#handleOpenNotifications"
+                    style="-fx-background-color:transparent;-fx-text-fill:#a8d8e2;
+                           -fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;
+                           -fx-background-radius:20;-fx-border-color:rgba(255,255,255,0.25);
+                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"/>
+
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
-            <Button text="🤖 Assistant"
+            <Button text="Assistant"
                     onAction="#openChatbot"
                     style="-fx-background-color:#6366f1;-fx-text-fill:white;
                            -fx-font-weight:bold;-fx-padding:6 14;
                            -fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;"/>
-            <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
+            <Button text="Deconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
         </HBox>
     </top>
 
@@ -29,22 +39,22 @@
         <ScrollPane fitToWidth="true">
             <VBox spacing="16" style="-fx-padding:20;">
 
-                <!-- Stats -->
+                <!-- Stats KPI -->
                 <HBox spacing="12">
                     <VBox styleClass="stat-card stat-blue"   HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="📚 Cours"     styleClass="stat-label"/>
+                        <Label text="Cours"     styleClass="stat-label"/>
                         <Label fx:id="statCoursLabel"   text="0"  styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-green"  HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="📖 Matières"  styleClass="stat-label"/>
+                        <Label text="Matieres"  styleClass="stat-label"/>
                         <Label fx:id="statMatiereLabel" text="0"  styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-orange" HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="⏱ Heures"    styleClass="stat-label"/>
+                        <Label text="Heures"    styleClass="stat-label"/>
                         <Label fx:id="statHeuresLabel"  text="0h" styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-purple" HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="🎓 Niveau"   styleClass="stat-label"/>
+                        <Label text="Niveau"   styleClass="stat-label"/>
                         <Label fx:id="statNiveauLabel"  text="—"  styleClass="stat-value-small"/>
                     </VBox>
                 </HBox>
@@ -52,7 +62,7 @@
                 <TabPane>
 
                     <!-- Tab 1 : Emploi du Temps -->
-                    <Tab text="📅 Emploi du Temps" closable="false">
+                    <Tab text="Emploi du Temps" closable="false">
                         <VBox spacing="12">
                             <HBox spacing="12" alignment="CENTER_LEFT">
                                 <Label text="Classe :" styleClass="form-label"/>
@@ -60,28 +70,27 @@
                                 <Label fx:id="totalCoursLabel" text="Cours : 0"
                                        style="-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#2563eb;"/>
                                 <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="📄 Export PDF" styleClass="btn-secondary" onAction="#handleExportPDF"/>
+                                <Button text="Export PDF" styleClass="btn-secondary" onAction="#handleExportPDF"/>
                             </HBox>
                             <HBox spacing="16">
                                 <TableView fx:id="coursTable" prefHeight="400"
                                            styleClass="data-table" HBox.hgrow="ALWAYS">
                                     <columns>
-                                        <TableColumn fx:id="colMat"        text="Matière"    prefWidth="155"/>
+                                        <TableColumn fx:id="colMat"        text="Matiere"    prefWidth="155"/>
                                         <TableColumn fx:id="colEns"        text="Enseignant" prefWidth="140"/>
                                         <TableColumn fx:id="colCren"       text="Jour"       prefWidth="90"/>
-                                        <!-- ✅ AJOUT : colonnes Début et Fin -->
-                                        <TableColumn fx:id="colHeureDebut" text="Début"      prefWidth="60"/>
+                                        <TableColumn fx:id="colHeureDebut" text="Debut"      prefWidth="60"/>
                                         <TableColumn fx:id="colHeureFin"   text="Fin"        prefWidth="60"/>
                                         <TableColumn fx:id="colSalle"      text="Salle"      prefWidth="75"/>
                                         <TableColumn fx:id="colDate"       text="Date"       prefWidth="100"/>
                                     </columns>
                                     <placeholder>
-                                        <Label text="Sélectionnez une classe pour voir les cours."
+                                        <Label text="Selectionnez une classe pour voir les cours."
                                                style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
                                     </placeholder>
                                 </TableView>
                                 <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
-                                    <Label text="📊 Cours par Matière" styleClass="form-title"/>
+                                    <Label text="Cours par Matiere" styleClass="form-title"/>
                                     <VBox fx:id="chartEtuContainer" minHeight="220"/>
                                 </VBox>
                             </HBox>
@@ -89,15 +98,15 @@
                     </Tab>
 
                     <!-- Tab 2 : Calendrier -->
-                    <Tab text="📅 Calendrier" closable="false">
+                    <Tab text="Calendrier" closable="false">
                         <VBox spacing="10">
                             <HBox alignment="CENTER_LEFT" spacing="12"
                                   style="-fx-padding:8;-fx-background-color:white;-fx-background-radius:8;">
-                                <Button text="◀ Préc."       styleClass="btn-secondary" onAction="#handlePrevWeek"/>
+                                <Button text="Precedent"    styleClass="btn-secondary" onAction="#handlePrevWeek"/>
                                 <Label fx:id="calendarWeekLabel" text="Semaine courante"
                                        styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="📅 Aujourd'hui" styleClass="btn-secondary" onAction="#handleTodayWeek"/>
-                                <Button text="Suiv. ▶"        styleClass="btn-secondary" onAction="#handleNextWeek"/>
+                                <Button text="Aujourd'hui"  styleClass="btn-secondary" onAction="#handleTodayWeek"/>
+                                <Button text="Suivant"      styleClass="btn-secondary" onAction="#handleNextWeek"/>
                             </HBox>
                             <ScrollPane fitToWidth="true" prefHeight="500">
                                 <GridPane fx:id="calendarGrid" hgap="0" vgap="0"
@@ -107,53 +116,58 @@
                     </Tab>
 
                     <!-- Tab 3 : Chercher Salle -->
-                    <Tab text="🔍 Chercher Salle Libre" closable="false">
+                    <Tab text="Chercher Salle Libre" closable="false">
                         <HBox spacing="16">
                             <VBox styleClass="form-panel" spacing="14" minWidth="290" maxWidth="290">
-                                <Label text="🔎 Filtres de Recherche" styleClass="form-title"/>
-                                <VBox spacing="8" style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
-                                    <Label text="⏱ Période" styleClass="form-label"/>
-                                    <RadioButton fx:id="radioMaintenantBtn" text="🟢 Maintenant (temps réel)"
+                                <Label text="Filtres de Recherche" styleClass="form-title"/>
+                                <VBox spacing="8" style="-fx-background-color:#f8fafc;-fx-padding:10;
+                                                          -fx-background-radius:8;-fx-border-color:#e2e8f0;
+                                                          -fx-border-width:1;-fx-border-radius:8;">
+                                    <Label text="Periode" styleClass="form-label"/>
+                                    <RadioButton fx:id="radioMaintenantBtn" text="Maintenant (temps reel)"
                                                  toggleGroup="$modeGroup" selected="true"
                                                  style="-fx-font-weight:bold;-fx-text-fill:#16a34a;"/>
-                                    <RadioButton fx:id="radioDateHeureBtn" text="📅 Date et heure précises"
+                                    <RadioButton fx:id="radioDateHeureBtn"  text="Date et heure precises"
                                                  toggleGroup="$modeGroup"/>
                                     <HBox fx:id="dateHeureBox" spacing="6" alignment="CENTER_LEFT" disable="true">
-                                        <DatePicker fx:id="datePicker"     prefWidth="150" promptText="Date"/>
-                                        <ComboBox   fx:id="heureDebutCombo" prefWidth="75" promptText="De"/>
-                                        <ComboBox   fx:id="heureFinCombo"   prefWidth="75" promptText="À"/>
+                                        <DatePicker fx:id="datePicker"      prefWidth="150" promptText="Date"/>
+                                        <ComboBox   fx:id="heureDebutCombo" prefWidth="75"  promptText="De"/>
+                                        <ComboBox   fx:id="heureFinCombo"   prefWidth="75"  promptText="A"/>
                                     </HBox>
                                 </VBox>
                                 <VBox spacing="4">
-                                    <Label text="👥 Capacité minimale" styleClass="form-label"/>
+                                    <Label text="Capacite minimale" styleClass="form-label"/>
                                     <Spinner fx:id="capaciteSpinner" prefWidth="200" editable="true"/>
                                 </VBox>
                                 <VBox spacing="4">
-                                    <Label text="🏫 Type de salle" styleClass="form-label"/>
+                                    <Label text="Type de salle" styleClass="form-label"/>
                                     <ComboBox fx:id="typeFilter" prefWidth="200"/>
                                 </VBox>
-                                <VBox spacing="6" style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
-                                    <Label text="🔧 Équipements requis" styleClass="form-label"/>
-                                    <CheckBox fx:id="checkProjecteur" text="📽 Vidéoprojecteur"/>
-                                    <CheckBox fx:id="checkTableau"    text="🖊 Tableau interactif"/>
-                                    <CheckBox fx:id="checkClim"       text="❄ Climatisation"/>
-                                    <CheckBox fx:id="checkOrdinateur" text="💻 Ordinateurs"/>
+                                <VBox spacing="6" style="-fx-background-color:#f8fafc;-fx-padding:10;
+                                                          -fx-background-radius:8;-fx-border-color:#e2e8f0;
+                                                          -fx-border-width:1;-fx-border-radius:8;">
+                                    <Label text="Equipements requis" styleClass="form-label"/>
+                                    <CheckBox fx:id="checkProjecteur" text="Videoprojecteur"/>
+                                    <CheckBox fx:id="checkTableau"    text="Tableau interactif"/>
+                                    <CheckBox fx:id="checkClim"       text="Climatisation"/>
+                                    <CheckBox fx:id="checkOrdinateur" text="Ordinateurs"/>
                                 </VBox>
-                                <Button text="🔍  Rechercher" styleClass="btn-primary" maxWidth="Infinity"
-                                        onAction="#handleRechercherSalles" style="-fx-font-size:13px;-fx-padding:10 0;"/>
-                                <Label fx:id="resultLabel" text="Lancez une recherche pour voir les résultats."
+                                <Button text="Rechercher" styleClass="btn-primary" maxWidth="Infinity"
+                                        onAction="#handleRechercherSalles"
+                                        style="-fx-font-size:13px;-fx-padding:10 0;"/>
+                                <Label fx:id="resultLabel" text="Lancez une recherche pour voir les resultats."
                                        wrapText="true" style="-fx-text-fill:#64748b;-fx-font-size:12px;"/>
                             </VBox>
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Salles disponibles" styleClass="section-title"/>
                                 <TableView fx:id="salleLibreTable" prefHeight="500" styleClass="data-table">
                                     <columns>
-                                        <TableColumn fx:id="colSalleNum"    text="Salle"       prefWidth="80"/>
-                                        <TableColumn fx:id="colSalleType"   text="Type"        prefWidth="65"/>
-                                        <TableColumn fx:id="colSalleCap"    text="Capacité"    prefWidth="75"/>
-                                        <TableColumn fx:id="colSalleBat"    text="Bâtiment"    prefWidth="150"/>
-                                        <TableColumn fx:id="colSalleEquip"  text="Équipements" prefWidth="200"/>
-                                        <TableColumn fx:id="colSalleStatut" text="Statut"      prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleNum"    text="Salle"      prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleType"   text="Type"       prefWidth="65"/>
+                                        <TableColumn fx:id="colSalleCap"    text="Capacite"   prefWidth="75"/>
+                                        <TableColumn fx:id="colSalleBat"    text="Batiment"   prefWidth="150"/>
+                                        <TableColumn fx:id="colSalleEquip"  text="Equipements" prefWidth="200"/>
+                                        <TableColumn fx:id="colSalleStatut" text="Statut"     prefWidth="80"/>
                                     </columns>
                                     <placeholder>
                                         <Label text="Lancez une recherche pour voir les salles libres."
@@ -165,11 +179,12 @@
                     </Tab>
 
                     <!-- Tab 4 : Notifications -->
-                    <Tab text="🔔 Notifications" closable="false">
+                    <Tab text="Notifications" closable="false">
                         <VBox spacing="12">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <Label text="Mes Notifications" styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="✓ Tout marquer comme lu" styleClass="btn-secondary" onAction="#handleMarkAllRead"/>
+                                <Button text="Tout marquer comme lu" styleClass="btn-secondary"
+                                        onAction="#handleMarkAllRead"/>
                             </HBox>
                             <TableView fx:id="notifTable" prefHeight="420" styleClass="data-table">
                                 <columns>
@@ -178,17 +193,18 @@
                                     <TableColumn fx:id="colNotifDate" text="Date"    prefWidth="120"/>
                                 </columns>
                                 <placeholder>
-                                    <Label text="Aucune notification." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                    <Label text="Aucune notification."
+                                           style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
                                 </placeholder>
                             </TableView>
                         </VBox>
                     </Tab>
 
                     <!-- Tab 5 : Mon Profil -->
-                    <Tab text="👤 Mon Profil" closable="false">
+                    <Tab text="Mon Profil" closable="false">
                         <ScrollPane fitToWidth="true">
                             <VBox spacing="20" style="-fx-padding:24;">
-                                <Label text="👤 Mon Profil Étudiant"
+                                <Label text="Mon Profil Etudiant"
                                        style="-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
                                 <VBox styleClass="form-panel" spacing="16">
                                     <HBox spacing="20" alignment="CENTER_LEFT">
@@ -196,7 +212,7 @@
                                               style="-fx-background-color:#0ea5e9;-fx-background-radius:50;
                                                      -fx-min-width:80;-fx-min-height:80;
                                                      -fx-max-width:80;-fx-max-height:80;">
-                                            <Label text="🎓" style="-fx-font-size:36px;" VBox.vgrow="ALWAYS"/>
+                                            <Label text="U" style="-fx-font-size:36px;-fx-font-weight:bold;-fx-text-fill:white;" VBox.vgrow="ALWAYS"/>
                                         </VBox>
                                         <VBox spacing="4">
                                             <Label fx:id="profilNom"   text="—"
@@ -211,12 +227,21 @@
                                             <ColumnConstraints minWidth="140"/>
                                             <ColumnConstraints hgrow="ALWAYS"/>
                                         </columnConstraints>
-                                        <Label text="🎓 Niveau"  styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilNiveau" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#2563eb;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-                                        <Label text="🏫 Classe"  styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilClasse" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-                                        <Label text="🪪 INE"     styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilINE"    text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                        <Label text="Niveau"  styleClass="form-label"
+                                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilNiveau" text="—"
+                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#2563eb;"
+                                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                        <Label text="Classe"  styleClass="form-label"
+                                               GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilClasse" text="—"
+                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"
+                                               GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                        <Label text="INE"     styleClass="form-label"
+                                               GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilINE" text="—"
+                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"
+                                               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                                     </GridPane>
                                 </VBox>
                             </VBox>

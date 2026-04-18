@@ -7,25 +7,19 @@
             prefWidth="1100" prefHeight="680"
             styleClass="root-bg">
 
-    <HBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
-          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
-          alignment="CENTER">
+    <!-- ══ CONTENU CENTRÉ (carte + panneau droit) ══ -->
+    <HBox AnchorPane.topAnchor="0"
+          AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0"
+          AnchorPane.rightAnchor="0"
+          alignment="CENTER"
+          pickOnBounds="false">
+
         <!-- CARTE CENTRALE -->
         <VBox styleClass="login-card"
               alignment="CENTER" spacing="14"
               maxWidth="480"
               VBox.vgrow="ALWAYS">
-
-            <!-- Barre top drag -->
-            <HBox styleClass="win-bar" alignment="CENTER_RIGHT"
-                  onMousePressed="#handleBarPressed"
-                  onMouseDragged="#handleBarDragged">
-                <HBox spacing="6" alignment="CENTER_RIGHT">
-                    <Button text="−" styleClass="btn-win-txt" onAction="#handleMinimize"/>
-                    <Button text="□" styleClass="btn-win-txt" onAction="#handleMaximize"/>
-                    <Button text="✕" styleClass="btn-win-txt-close" onAction="#handleClose"/>
-                </HBox>
-            </HBox>
 
             <!-- Logo -->
             <StackPane>
@@ -40,11 +34,10 @@
                 <Label text="et Emplois du Temps" styleClass="brand-subtitle"/>
             </VBox>
 
-            <!-- Trait BLEU -->
+            <!-- Trait -->
             <HBox alignment="CENTER">
                 <Region styleClass="brand-line"/>
             </HBox>
-
 
             <!-- Slogan -->
             <Label text="Réservez · Planifiez · Optimisez" styleClass="brand-slogan"/>
@@ -62,7 +55,6 @@
             </VBox>
 
         </VBox>
-
 
         <!-- PANNEAU DROIT — caché par défaut -->
         <VBox fx:id="rightPanel"
@@ -116,4 +108,21 @@
         </VBox>
 
     </HBox>
+
+    <!-- ══ BARRE TITRE — déclarée EN DERNIER = z-order au-dessus de tout ══ -->
+    <HBox AnchorPane.topAnchor="0"
+          AnchorPane.leftAnchor="0"
+          AnchorPane.rightAnchor="0"
+          styleClass="win-bar"
+          alignment="CENTER_RIGHT"
+          onMousePressed="#handleBarPressed"
+          onMouseDragged="#handleBarDragged"
+          pickOnBounds="false">
+        <HBox spacing="6" alignment="CENTER_RIGHT" style="-fx-padding: 0 8 0 0;">
+            <Button text="−" styleClass="btn-win-txt" onAction="#handleMinimize"/>
+            <Button text="□" styleClass="btn-win-txt" onAction="#handleMaximize"/>
+            <Button text="✕" styleClass="btn-win-txt-close" onAction="#handleClose"/>
+        </HBox>
+    </HBox>
+
 </AnchorPane>

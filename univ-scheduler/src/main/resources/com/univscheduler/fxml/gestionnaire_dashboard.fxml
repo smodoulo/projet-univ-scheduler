@@ -376,6 +376,88 @@
                         </ScrollPane>
                     </Tab>
 
+                    <Tab text="📝 Examens &amp; Devoirs" closable="false">
+                        <VBox spacing="14" style="-fx-padding:16;">
+
+                            <!-- En-tête -->
+                            <HBox alignment="CENTER_LEFT" spacing="12">
+                                <Label text="📝 Demandes d'Examens &amp; Devoirs"
+                                       style="-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;"
+                                       HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="examenBadge" text="" visible="false"
+                                       style="-fx-background-color:#fee2e2;-fx-text-fill:#991b1b;
+                          -fx-font-size:12px;-fx-font-weight:bold;
+                          -fx-padding:3 12;-fx-background-radius:20;"/>
+                                <Button text="🔄 Actualiser" styleClass="btn-secondary"
+                                        onAction="#handleRefreshExamens"/>
+                            </HBox>
+
+                            <!-- Filtre statut -->
+                            <HBox spacing="10" alignment="CENTER_LEFT"
+                                  style="-fx-background-color:white;-fx-padding:8 12;
+                     -fx-background-radius:10;-fx-border-color:#d4ecf0;
+                     -fx-border-radius:10;-fx-border-width:1;">
+                                <Label text="Filtrer :"
+                                       style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#4a7a87;"/>
+                                <ComboBox fx:id="examenFiltreCombo" prefWidth="180"
+                                          onAction="#handleFiltreExamens"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="examenInfoLabel" text=""
+                                       style="-fx-font-size:11px;-fx-text-fill:#2a9cb0;-fx-font-style:italic;"/>
+                            </HBox>
+
+                            <!-- Table des demandes -->
+                            <TableView fx:id="examenTable" prefHeight="380" styleClass="data-table">
+                                <columns>
+                                    <TableColumn fx:id="colExType"      text="Type"       prefWidth="90"/>
+                                    <TableColumn fx:id="colExEns"       text="Enseignant" prefWidth="140"/>
+                                    <TableColumn fx:id="colExTitre"     text="Titre"      prefWidth="160"/>
+                                    <TableColumn fx:id="colExClasse"    text="Classe"     prefWidth="110"/>
+                                    <TableColumn fx:id="colExMatiere"   text="Matière"    prefWidth="130"/>
+                                    <TableColumn fx:id="colExDate"      text="Date"       prefWidth="130"/>
+                                    <TableColumn fx:id="colExSalle"     text="Salle"      prefWidth="80"/>
+                                    <TableColumn fx:id="colExStatut"    text="Statut"     prefWidth="115"/>
+                                </columns>
+                                <placeholder>
+                                    <Label text="Aucune demande."
+                                           style="-fx-text-fill:#9eb3bf;-fx-font-style:italic;"/>
+                                </placeholder>
+                            </TableView>
+
+                            <!-- Panneau traitement -->
+                            <VBox styleClass="form-panel" spacing="12">
+                                <Label text="✏ Traiter la demande sélectionnée" styleClass="form-title"/>
+                                <VBox spacing="5">
+                                    <Label text="Commentaire / Motif (optionnel)" styleClass="form-label"/>
+                                    <TextField fx:id="examenMotifField"
+                                               promptText="Ex: Salle confirmée, créneau approuvé..."
+                                               styleClass="form-field"/>
+                                </VBox>
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <Button text="✅ Valider la demande"
+                                            onAction="#handleValiderExamen"
+                                            style="-fx-background-color:#3ecf8e;-fx-text-fill:white;
+                               -fx-font-weight:bold;-fx-padding:10 24;
+                               -fx-background-radius:10;-fx-cursor:hand;
+                               -fx-effect:dropshadow(gaussian,rgba(62,207,142,0.28),8,0,0,2);"/>
+                                    <Button text="❌ Refuser la demande"
+                                            onAction="#handleRefuserExamen"
+                                            style="-fx-background-color:#e05c5c;-fx-text-fill:white;
+                               -fx-font-weight:bold;-fx-padding:10 24;
+                               -fx-background-radius:10;-fx-cursor:hand;
+                               -fx-effect:dropshadow(gaussian,rgba(224,92,92,0.28),8,0,0,2);"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="examenActionFeedback" text="" visible="false"
+                                           style="-fx-font-weight:bold;-fx-font-size:12px;"/>
+                                </HBox>
+                                <Label text="ℹ Si validée : l'enseignant reçoit une notification + email de confirmation."
+                                       style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"/>
+                            </VBox>
+
+                        </VBox>
+                    </Tab>
+
+
                 </TabPane>
             </VBox>
         </ScrollPane>

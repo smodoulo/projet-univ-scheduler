@@ -4,9 +4,12 @@ import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
 import com.univscheduler.model.Servicerappel;
 import com.univscheduler.model.AlertePersonnalisee;
+import com.univscheduler.model.Examen;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import com.univscheduler.service.EmailService;
+import com.univscheduler.service.ExamenService;
+import com.univscheduler.dao.EtudiantDAO;
 import javafx.application.Platform;
 import javafx.collections.*;
 import javafx.fxml.FXML;
@@ -81,13 +84,32 @@ public class EnseignantDashboardController extends BaseController {
             colSigPrio, colSigStatut, colSigDate, colSigSalle;
     @FXML private Label sigBadge;
 
+    // ─── EXAMENS & DEVOIRS ───
+    @FXML private ComboBox<String>       examenTypeCombo;
+    @FXML private TextField              examenTitreField;
+    @FXML private ComboBox<ClassePedago> examenClasseCombo;
+    @FXML private ComboBox<Matiere>      examenMatiereCombo;
+    @FXML private DatePicker             examenDatePicker;
+    @FXML private ComboBox<String>       examenHeureCombo;
+    @FXML private Spinner<Integer>       examenDureeSpinner;
+    @FXML private ComboBox<Salle>        examenSalleCombo;
+    @FXML private TextArea               examenDescArea;
+    @FXML private Label                  examenFeedbackLabel;
+    @FXML private Label                  examenConflitLabel;
+    @FXML private TableView<Examen>      examenTable;
+    @FXML private TableColumn<Examen, String> colExType, colExTitre, colExClasse,
+            colExMatiere, colExDate, colExSalle, colExStatut, colExComm;
+
     // ─── DAOs ───
-    private final CoursDAO        coursDAO  = new CoursDAO();
-    private final ReservationDAO  reservDAO = new ReservationDAO();
-    private final SalleDAO        salleDAO  = new SalleDAO();
-    private final NotificationDAO notifDAO  = new NotificationDAO();
-    private final SignalementDAO  sigDAO    = new SignalementDAO();
-    private final ExportService   exportSvc = new ExportService();
+    private final CoursDAO        coursDAO    = new CoursDAO();
+    private final ReservationDAO  reservDAO   = new ReservationDAO();
+    private final SalleDAO        salleDAO    = new SalleDAO();
+    private final NotificationDAO notifDAO    = new NotificationDAO();
+    private final SignalementDAO  sigDAO      = new SignalementDAO();
+    private final ExportService   exportSvc   = new ExportService();
+    private final ClassePedagoDAO classeDAO2  = new ClassePedagoDAO();
+    private final MatiereDAO      matiereDAO2 = new MatiereDAO();
+    private final ExamenService   examenService = new ExamenService();
 
     private final ObservableList<Cours>        coursList  = FXCollections.observableArrayList();
     private final ObservableList<Reservation>  reservList = FXCollections.observableArrayList();
@@ -96,7 +118,6 @@ public class EnseignantDashboardController extends BaseController {
     private final ObservableList<Signalement>  sigList    = FXCollections.observableArrayList();
 
     private Reservation selectedReserv = null;
-
     private ScheduledExecutorService rappelStatutScheduler;
     private final Set<Integer> coursDejaNotifies = new HashSet<>();
 
@@ -104,7 +125,11 @@ public class EnseignantDashboardController extends BaseController {
             "08:00","09:00","10:00","11:00","12:00","13:00",
             "14:00","15:00","16:00","17:00","18:00","19:00","20:00");
 
-    // ── Couleurs palette teal UNIV-SCHEDULER ─────────────────────
+    private static final List<String> HEURES_EXAM = List.of(
+            "07:00","08:00","09:00","10:00","11:00","12:00",
+            "13:00","14:00","15:00","16:00","17:00","18:00");
+
+    // ── Palette teal UNIV-SCHEDULER ──────────────────────────────
     private static final Map<String, String> COULEURS_STATUT = Map.of(
             "PLANIFIE", "#2a9cb0",
             "REALISE",  "#1a5f6e",
@@ -124,32 +149,262 @@ public class EnseignantDashboardController extends BaseController {
         return u.getEmail() != null && u.getEmail().endsWith("@gmail.com");
     }
 
-    // ═══════════════════════════ INIT ════════════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Initialisation
+    // ════════════════════════════════════════════════════════════════
     @Override
     protected void onUserLoaded() {
         welcomeLabel.setText("Bonjour, " + currentUser.getNomComplet());
         classeSelectionnee = "TOUTES";
-        setupCoursTable();
-        setupReservTable();
-        setupSalleTable();
-        setupNotifTable();
-        setupSearchControls();
-        setupSignalementForm();
-        setupMesSignalementsTable();
-        loadData();
-        buildChart();
-        handleRechercherSalles();
+        setupCoursTable(); setupReservTable(); setupSalleTable();
+        setupNotifTable(); setupSearchControls();
+        setupSignalementForm(); setupMesSignalementsTable();
+        loadData(); buildChart(); handleRechercherSalles();
         Servicerappel.getInstance().demarrer();
         demarrerRappelStatutCours();
+        initExamenTab();
     }
 
-    // ═══════════════════════════ RAPPEL STATUT COURS ══════════════
+    // ════════════════════════════════════════════════════════════════
+    //  EXAMENS & DEVOIRS
+    // ════════════════════════════════════════════════════════════════
+    private void initExamenTab() {
+        if (examenTable == null) return;
+
+        if (colExType    != null) colExType.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getTypeIcon() + " " + d.getValue().getType()));
+        if (colExTitre   != null) colExTitre.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getTitre()));
+        if (colExClasse  != null) colExClasse.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getClasseNom()));
+        if (colExMatiere != null) colExMatiere.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getMatiereNom()));
+        // ✅ CORRECTION 3 : format date lisible "25/04/2026 à 09:00"
+        if (colExDate    != null) colExDate.setCellValueFactory(d ->
+                new SimpleStringProperty(formatDateExam(d.getValue().getDateExamen())));
+        if (colExSalle   != null) colExSalle.setCellValueFactory(d ->
+                new SimpleStringProperty(nvlStr(d.getValue().getSalleNumero(), "Maison")));
+        if (colExStatut  != null) colExStatut.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getStatutAffichage()));
+        if (colExComm    != null) colExComm.setCellValueFactory(d ->
+                new SimpleStringProperty(nvlStr(d.getValue().getCommentaireGestionnaire(), "")));
+
+        examenTable.setRowFactory(tv -> new TableRow<Examen>() {
+            @Override protected void updateItem(Examen item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) { setStyle(""); return; }
+                switch (item.getStatut()) {
+                    case Examen.STATUT_VALIDE: setStyle("-fx-background-color:#dcfce7;"); break;
+                    case Examen.STATUT_REFUSE: setStyle("-fx-background-color:#fee2e2;"); break;
+                    case Examen.STATUT_ANNULE: setStyle("-fx-background-color:#f1f5f9;"); break;
+                    default:                   setStyle("-fx-background-color:#eff6ff;"); break;
+                }
+            }
+        });
+
+        if (examenTypeCombo    != null) examenTypeCombo.setItems(FXCollections.observableArrayList("EXAMEN","DEVOIR","CONTROLE"));
+        if (examenClasseCombo  != null) examenClasseCombo.setItems(FXCollections.observableArrayList(classeDAO2.findAll()));
+        if (examenMatiereCombo != null) examenMatiereCombo.setItems(FXCollections.observableArrayList(matiereDAO2.findAll()));
+        if (examenHeureCombo   != null) { examenHeureCombo.setItems(FXCollections.observableArrayList(HEURES_EXAM)); examenHeureCombo.setValue("09:00"); }
+        if (examenDureeSpinner != null) examenDureeSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(15,360,120,15));
+        if (examenSalleCombo   != null) { examenSalleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll())); examenSalleCombo.setPromptText("Aucune (devoir à la maison)"); }
+        if (examenFeedbackLabel != null) examenFeedbackLabel.setVisible(false);
+        if (examenConflitLabel  != null) examenConflitLabel.setVisible(false);
+        if (examenDatePicker    != null) examenDatePicker.setValue(LocalDate.now().plusDays(7));
+
+        handleRefreshExamens();
+    }
+
+    @FXML
+    public void handleRefreshExamens() {
+        if (currentUser == null || examenTable == null) return;
+        examenTable.setItems(FXCollections.observableArrayList(
+                examenService.getMesExamens(currentUser.getId())));
+    }
+
+    // ✅ CORRECTION 4 : handleSoumettreExamen() entièrement réécrit
+    //   - alertes enrichies avec émojis
+    //   - format date lisible "25/04/2026"
+    //   - alerte succès personnalisée via AlertePersonnalisee.examenSoumisAvecSucces()
+    @FXML
+    private void handleSoumettreExamen() {
+
+        // ── Collecter les valeurs ─────────────────────────────────
+        String type         = examenTypeCombo    != null ? examenTypeCombo.getValue()        : null;
+        String titre        = examenTitreField   != null ? examenTitreField.getText().trim()  : "";
+        ClassePedago classe = examenClasseCombo  != null ? examenClasseCombo.getValue()       : null;
+        Matiere matiere     = examenMatiereCombo != null ? examenMatiereCombo.getValue()       : null;
+        LocalDate date      = examenDatePicker   != null ? examenDatePicker.getValue()        : null;
+        String heure        = examenHeureCombo   != null ? examenHeureCombo.getValue()        : null;
+
+        // ── Validation : champs manquants ─────────────────────────
+        List<String> manquants = new ArrayList<>();
+        if (type  == null || type.isBlank())   manquants.add("📋  Type  (Examen / Devoir / Contrôle)");
+        if (titre.isEmpty())                   manquants.add("📌  Titre de la demande");
+        if (classe == null)                    manquants.add("🎓  Classe concernée");
+        if (date   == null)                    manquants.add("📅  Date de l'examen / devoir");
+        if (heure  == null || heure.isBlank()) manquants.add("⏰  Heure de début");
+
+        if (!manquants.isEmpty()) {
+            AlertePersonnalisee.examenChampsManquants(manquants);
+            return;
+        }
+
+        // ── Validation : date future ──────────────────────────────
+        if (date.isBefore(LocalDate.now())) {
+            AlertePersonnalisee.examenDatePassee(
+                    date.getDayOfMonth() + "/" + date.getMonthValue() + "/" + date.getYear());
+            return;
+        }
+
+        // ── Construire l'objet Examen ─────────────────────────────
+        Salle  salle = examenSalleCombo   != null ? examenSalleCombo.getValue()   : null;
+        String desc  = examenDescArea     != null ? examenDescArea.getText().trim(): "";
+        int    duree = examenDureeSpinner != null ? examenDureeSpinner.getValue()  : 120;
+
+        Examen ex = new Examen();
+        ex.setType(type); ex.setTitre(titre);
+        ex.setEnseignantId(currentUser.getId());
+        ex.setEnseignantNom(currentUser.getPrenom() + " " + currentUser.getNom());
+        ex.setClasseId(classe.getId()); ex.setClasseNom(classe.getNom());
+        if (matiere != null) { ex.setMatiereId(matiere.getId()); ex.setMatiereNom(matiere.getNom()); }
+        if (salle   != null) { ex.setSalleId(salle.getId());     ex.setSalleNumero(salle.getNumero()); }
+        // ✅ Format ISO correct pour la BDD
+        ex.setDateExamen(date.toString() + "T" + heure + ":00");
+        ex.setDureeMinutes(duree);
+        ex.setDescription(desc);
+
+        // ── Soumettre (sauvegarde BDD + emails gestionnaires) ─────
+        examenService.soumettre(ex);
+
+        // ── Variables finales pour les lambdas ────────────────────
+        final ClassePedago classeFinal = classe;
+        final String       titreFinal  = titre;
+        final String       heureFinal  = heure;
+        final Salle        salleFinal  = salle;
+        final int          dureeFinal  = duree;
+        final String       matiereNomF = matiere != null ? matiere.getNom() : "Non précisée";
+        // ✅ Format lisible pour l'affichage : "25/04/2026"
+        final String dateFmt = String.format("%02d/%02d/%04d",
+                date.getDayOfMonth(), date.getMonthValue(), date.getYear());
+        final String typeIcon = switch (type) {
+            case "EXAMEN"   -> "📋";
+            case "DEVOIR"   -> "📝";
+            case "CONTROLE" -> "✍️";
+            default         -> "📝";
+        };
+
+        // ── Notifications in-app aux gestionnaires/admins ─────────
+        new UtilisateurDAO().findAll().stream()
+                .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
+                .forEach(u -> {
+                    Notification n = new Notification();
+                    n.setUtilisateurId(u.getId()); n.setType("INFO");
+                    n.setMessage(typeIcon + " Nouvelle demande : " + titreFinal
+                            + " (" + classeFinal.getNom() + ")"
+                            + " par " + currentUser.getNomComplet()
+                            + " | " + dateFmt + " à " + heureFinal
+                            + (salleFinal != null ? " | Salle : " + salleFinal.getNumero() : ""));
+                    n.setDateEnvoi(LocalDateTime.now());
+                    notifDAO.save(n);
+                });
+
+        // ── Emails étudiants de la classe en background ───────────
+        new Thread(() -> {
+            List<Utilisateur> etudiantsClasse =
+                    new ArrayList<>(new EtudiantDAO().findByClasseId(classeFinal.getId()));
+            for (Utilisateur etu : etudiantsClasse) {
+                Notification nEtu = new Notification();
+                nEtu.setUtilisateurId(etu.getId()); nEtu.setType("INFO");
+                nEtu.setMessage(typeIcon + " " + titreFinal + " programmé le " + dateFmt
+                        + " à " + heureFinal
+                        + " | Matière : " + matiereNomF
+                        + " | Durée : " + dureeFinal + " min"
+                        + (salleFinal != null
+                        ? " | Salle : " + salleFinal.getNumero()
+                        : " | Devoir à la maison")
+                        + " | Enseignant : " + currentUser.getNomComplet());
+                nEtu.setDateEnvoi(LocalDateTime.now());
+                notifDAO.save(nEtu);
+
+                if (isGmail(etu)) {
+                    EmailService.sendNotification(etu,
+                            typeIcon + " " + titreFinal + " - " + classeFinal.getNom(),
+                            "Bonjour " + etu.getNomComplet() + ",\n\n"
+                                    + "Un " + type.toLowerCase() + " a été programmé :\n\n"
+                                    + "  Titre      : " + titreFinal + "\n"
+                                    + "  Matière    : " + matiereNomF + "\n"
+                                    + "  Date       : " + dateFmt + " à " + heureFinal + "\n"
+                                    + "  Durée      : " + dureeFinal + " minutes\n"
+                                    + (salleFinal != null
+                                    ? "  Salle      : " + salleFinal.getNumero() + "\n"
+                                    : "  Lieu       : Devoir à la maison\n")
+                                    + "  Enseignant : " + currentUser.getNomComplet() + "\n\n"
+                                    + "Cette demande est en attente de validation par le gestionnaire.\n\n"
+                                    + "Cordialement,\nUNIV-SCHEDULER");
+                }
+            }
+        }, "email-examen-classe").start();
+
+        // ── ✅ CORRECTION 4 : Alerte succès personnalisée ─────────
+        // Utilise le format lisible partout (date, heure, salle)
+        AlertePersonnalisee.examenSoumisAvecSucces(
+                type,
+                titre,
+                classe.getNom(),
+                matiereNomF,
+                dateFmt,        // ← "25/04/2026" (lisible)
+                heure,          // ← "09:00"
+                salle != null ? salle.getNumero() : null,
+                duree);
+
+        // ── Réinitialiser le formulaire et rafraîchir la table ────
+        handleClearExamen();
+        handleRefreshExamens();
+    }
+
+    @FXML
+    private void handleClearExamen() {
+        if (examenTypeCombo    != null) examenTypeCombo.setValue(null);
+        if (examenTitreField   != null) examenTitreField.clear();
+        if (examenClasseCombo  != null) examenClasseCombo.setValue(null);
+        if (examenMatiereCombo != null) examenMatiereCombo.setValue(null);
+        if (examenDatePicker   != null) examenDatePicker.setValue(LocalDate.now().plusDays(7));
+        if (examenHeureCombo   != null) examenHeureCombo.setValue("09:00");
+        if (examenDureeSpinner != null) examenDureeSpinner.getValueFactory().setValue(120);
+        if (examenSalleCombo   != null) examenSalleCombo.setValue(null);
+        if (examenDescArea     != null) examenDescArea.clear();
+        if (examenFeedbackLabel != null) examenFeedbackLabel.setVisible(false);
+        if (examenConflitLabel  != null) examenConflitLabel.setVisible(false);
+    }
+
+    // ✅ CORRECTION 3 : format date lisible "25/04/2026 à 09:00"
+    private String formatDateExam(String d) {
+        if (d == null || d.isEmpty()) return "—";
+        try {
+            // Input  : "2026-04-25T09:00:00"
+            // Output : "25/04/2026 à 09:00"
+            String[] parts = d.split("T");
+            String[] ymd   = parts[0].split("-");             // [2026, 04, 25]
+            String   heure = parts.length > 1
+                    ? parts[1].substring(0, 5)                 // "09:00"
+                    : "—";
+            return ymd[2] + "/" + ymd[1] + "/" + ymd[0]       // "25/04/2026"
+                    + " à " + heure;                           // " à 09:00"
+        } catch (Exception e) { return d; }
+    }
+
+    private String nvlStr(String s, String def) {
+        return (s != null && !s.isBlank()) ? s : def;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  Rappel statut cours
+    // ════════════════════════════════════════════════════════════════
     private void demarrerRappelStatutCours() {
         if (rappelStatutScheduler != null && !rappelStatutScheduler.isShutdown()) return;
         rappelStatutScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "RappelStatutCours");
-            t.setDaemon(true);
-            return t;
+            Thread t = new Thread(r, "RappelStatutCours"); t.setDaemon(true); return t;
         });
         coursDejaNotifies.clear();
         rappelStatutScheduler.scheduleAtFixedRate(() -> {
@@ -157,43 +412,33 @@ public class EnseignantDashboardController extends BaseController {
                 List<Cours> mesCours = coursDAO.findByEnseignant(currentUser.getId());
                 LocalDate today = LocalDate.now();
                 for (Cours c : mesCours) {
-                    if (!"PLANIFIE".equals(c.getStatut())) continue;
-                    if (c.getDate() == null) continue;
+                    if (!"PLANIFIE".equals(c.getStatut()) || c.getDate() == null) continue;
                     if (c.getDate().isBefore(today) && !coursDejaNotifies.contains(c.getId())) {
                         coursDejaNotifies.add(c.getId());
                         envoyerRappelStatut(c);
                     }
                 }
                 Platform.runLater(this::rafraichirBadgeNotif);
-            } catch (Exception e) {
-                System.err.println("[RappelStatut] Erreur : " + e.getMessage());
-            }
+            } catch (Exception e) { System.err.println("[RappelStatut] " + e.getMessage()); }
         }, 0, 1, TimeUnit.HOURS);
-        System.out.println("[RappelStatut] Démarré — vérification toutes les heures.");
     }
 
     private void envoyerRappelStatut(Cours c) {
-        String msg = "⏰ Rappel statut : Le cours « " + c.getMatiereNom()
+        Notification n = new Notification();
+        n.setUtilisateurId(currentUser.getId()); n.setType("ALERTE");
+        n.setMessage("⏰ Rappel statut : Le cours « " + c.getMatiereNom()
                 + " » (" + c.getClasseNom() + ") du " + c.getDate()
                 + " est terminé mais toujours « PLANIFIÉ »."
-                + " Merci de mettre à jour son statut (Réalisé ou Annulé).";
-        Notification n = new Notification();
-        n.setUtilisateurId(currentUser.getId());
-        n.setType("ALERTE");
-        n.setMessage(msg);
+                + " Merci de mettre à jour son statut (Réalisé ou Annulé).");
         n.setDateEnvoi(LocalDateTime.now());
         notifDAO.save(n);
-        if (isGmail(currentUser)) {
+        if (isGmail(currentUser))
             EmailService.sendNotification(currentUser,
                     "⏰ Statut à mettre à jour — " + c.getMatiereNom(),
                     "Bonjour " + currentUser.getNomComplet() + ",\n\n"
-                            + "Le cours suivant est terminé mais son statut est toujours « PLANIFIÉ » :\n"
-                            + "  • Cours  : " + c.getMatiereNom() + " (" + c.getClasseNom() + ")\n"
-                            + "  • Date   : " + c.getDate() + "\n"
-                            + "  • Salle  : " + (c.getSalleNumero() != null ? c.getSalleNumero() : "—") + "\n\n"
-                            + "Merci de le marquer comme « RÉALISÉ » ou « ANNULÉ » depuis votre tableau de bord.\n\n"
-                            + "Cordialement,\nUNIV-SCHEDULER");
-        }
+                            + "Le cours « " + c.getMatiereNom() + " » (" + c.getClasseNom()
+                            + ") du " + c.getDate() + " est toujours « PLANIFIÉ ».\n"
+                            + "Merci de le marquer comme RÉALISÉ ou ANNULÉ.\n\nUNIV-SCHEDULER");
     }
 
     public void arreterRappelStatutCours() {
@@ -201,9 +446,10 @@ public class EnseignantDashboardController extends BaseController {
             rappelStatutScheduler.shutdown();
     }
 
-    // ═══════════════════════════ BADGE NOTIFICATIONS ══════════════
-    @FXML
-    private void handleOpenNotifications() {
+    // ════════════════════════════════════════════════════════════════
+    //  Notifications badge
+    // ════════════════════════════════════════════════════════════════
+    @FXML private void handleOpenNotifications() {
         List<Notification> notifs = notifDAO.findByUtilisateur(currentUser.getId());
         AlertePersonnalisee.afficherNotifications(notifs);
         notifDAO.markAllRead(currentUser.getId());
@@ -216,27 +462,23 @@ public class EnseignantDashboardController extends BaseController {
         if (unread > 0) {
             notifBadgeBtn.setText("🔔 " + unread + " non lue(s)");
             notifBadgeBtn.setStyle(
-                    "-fx-background-color:#fee2e2;-fx-text-fill:#dc2626;" +
-                            "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
-                            "-fx-background-radius:20;-fx-border-color:#fca5a5;" +
-                            "-fx-border-width:1.5;-fx-border-radius:20;-fx-font-size:12px;");
+                    "-fx-background-color:#fee2e2;-fx-text-fill:#dc2626;-fx-font-weight:bold;" +
+                            "-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:20;" +
+                            "-fx-border-color:#fca5a5;-fx-border-width:1.5;-fx-border-radius:20;-fx-font-size:12px;");
         } else {
             notifBadgeBtn.setText("🔔 Aucune nouvelle");
             notifBadgeBtn.setStyle(
-                    "-fx-background-color:transparent;-fx-text-fill:#64748b;" +
-                            "-fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;" +
-                            "-fx-background-radius:20;-fx-border-color:#e2e8f0;" +
-                            "-fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;");
+                    "-fx-background-color:transparent;-fx-text-fill:#64748b;-fx-font-weight:bold;" +
+                            "-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:20;" +
+                            "-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;");
         }
     }
 
     // ── Helpers créneau ───────────────────────────────────────────
     private String extraireJour(String info) {
         if (info == null) return "—";
-        String[] p = info.split(" ");
-        return p.length > 0 ? p[0] : info;
+        return info.split(" ")[0];
     }
-
     private String extraireHeureDebut(String info) {
         if (info == null) return "—";
         try {
@@ -246,7 +488,6 @@ public class EnseignantDashboardController extends BaseController {
         } catch (Exception ignored) {}
         return "—";
     }
-
     private String extraireHeureFin(String info) {
         if (info == null) return "—";
         try {
@@ -262,27 +503,28 @@ public class EnseignantDashboardController extends BaseController {
         return "—";
     }
 
-    // ═══════════════════════════ EDT ═════════════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  EDT — setup table + changement de statut
+    // ════════════════════════════════════════════════════════════════
     private void setupCoursTable() {
         colMat.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getMatiereNom()));
         colCls.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getClasseNom()));
         colCren.setCellValueFactory(d -> new SimpleStringProperty(extraireJour(d.getValue().getCreneauInfo())));
-        if (colHeureDebut != null)
-            colHeureDebut.setCellValueFactory(d ->
-                    new SimpleStringProperty(extraireHeureDebut(d.getValue().getCreneauInfo())));
-        if (colHeureFin != null)
-            colHeureFin.setCellValueFactory(d ->
-                    new SimpleStringProperty(extraireHeureFin(d.getValue().getCreneauInfo())));
+        if (colHeureDebut != null) colHeureDebut.setCellValueFactory(d ->
+                new SimpleStringProperty(extraireHeureDebut(d.getValue().getCreneauInfo())));
+        if (colHeureFin   != null) colHeureFin.setCellValueFactory(d ->
+                new SimpleStringProperty(extraireHeureFin(d.getValue().getCreneauInfo())));
         colSalle.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getSalleNumero()));
         colDate.setCellValueFactory(d -> new SimpleStringProperty(
                 d.getValue().getDate() != null ? d.getValue().getDate().toString() : ""));
 
         colStatut.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatut()));
         colStatut.setCellFactory(col -> new TableCell<Cours, String>() {
-            @Override
-            protected void updateItem(String statut, boolean empty) {
+            @Override protected void updateItem(String statut, boolean empty) {
                 super.updateItem(statut, empty);
                 if (empty || statut == null) { setText(null); setStyle(""); setGraphic(null); return; }
+
+                // ✅ CORRECTION 1 : badges avec émojis (sans crochets)
                 String affichage, couleurFond, couleurTexte;
                 switch (statut) {
                     case "PLANIFIE": affichage = "📅 Planifié";  couleurFond = "#dbeafe"; couleurTexte = "#1e40af"; break;
@@ -292,6 +534,7 @@ public class EnseignantDashboardController extends BaseController {
                     case "TERMINE":  affichage = "🏁 Terminé";   couleurFond = "#f3f4f6"; couleurTexte = "#374151"; break;
                     default:         affichage = statut;          couleurFond = "#f1f5f9"; couleurTexte = "#475569";
                 }
+
                 boolean statutFinal = "REALISE".equals(statut) || "ANNULE".equals(statut);
                 Label badge = new Label(affichage + (statutFinal ? "" : "  ▾"));
                 badge.setStyle(
@@ -321,8 +564,7 @@ public class EnseignantDashboardController extends BaseController {
         });
 
         coursTable.setRowFactory(tv -> new TableRow<Cours>() {
-            @Override
-            protected void updateItem(Cours cours, boolean empty) {
+            @Override protected void updateItem(Cours cours, boolean empty) {
                 super.updateItem(cours, empty);
                 if (cours == null || empty) { setStyle(""); return; }
                 switch (cours.getStatut() != null ? cours.getStatut() : "") {
@@ -337,14 +579,17 @@ public class EnseignantDashboardController extends BaseController {
         coursTable.setItems(coursListFiltered);
     }
 
+    // ✅ CORRECTION 2 : icone avec émojis + CORRECTION message showInfo
     private void changerStatutCours(Cours cours, String nouveauStatut) {
         if (cours == null) return;
         String ancienStatut = cours.getStatut() != null ? cours.getStatut() : "PLANIFIE";
         if ("REALISE".equals(ancienStatut) || "ANNULE".equals(ancienStatut)) {
-            showError("Action impossible", "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
+            showError("Action impossible",
+                    "Ce cours est déjà « " + ancienStatut + " ».\nLe statut ne peut plus être modifié.");
             return;
         }
         if (nouveauStatut.equals(ancienStatut)) return;
+
         String motifAnnulation = null;
         if ("ANNULE".equals(nouveauStatut)) {
             motifAnnulation = AlertePersonnalisee.demanderMotifAnnulation(
@@ -354,73 +599,104 @@ public class EnseignantDashboardController extends BaseController {
                     extraireHeureFin(cours.getCreneauInfo()));
             if (motifAnnulation == null) return;
         }
+
         cours.setStatut(nouveauStatut);
         coursDAO.updateStatut(cours.getId(), nouveauStatut);
         if ("REALISE".equals(nouveauStatut) || "ANNULE".equals(nouveauStatut))
             coursDejaNotifies.add(cours.getId());
 
-        String icone = "REALISE".equals(nouveauStatut) ? "✅" : "❌";
+        // ✅ CORRECTION 2 : icone avec émojis (pas de crochets)
+        final String icone     = "REALISE".equals(nouveauStatut) ? "✅" : "❌";
+        final String typeNotif = "ANNULE".equals(nouveauStatut) ? "ALERTE" : "INFO";
+
         final String motifFinal  = motifAnnulation;
         final String classeNom   = cours.getClasseNom();
         final String matiereNom  = cours.getMatiereNom();
         final String salleNumero = cours.getSalleNumero();
+        final int    classeId    = cours.getClasseId();
+        final String jourStr     = extraireJour(cours.getCreneauInfo());
+        final String heureDebStr = extraireHeureDebut(cours.getCreneauInfo());
+        final String heureFinStr = extraireHeureFin(cours.getCreneauInfo());
 
         String message = icone + " Statut modifié par " + currentUser.getNomComplet()
                 + " | Cours : " + matiereNom + " (" + classeNom + ")"
-                + " | " + extraireJour(cours.getCreneauInfo())
-                + " " + extraireHeureDebut(cours.getCreneauInfo())
-                + "–" + extraireHeureFin(cours.getCreneauInfo())
+                + " | " + jourStr + " " + heureDebStr + "–" + heureFinStr
                 + " | Salle : " + (salleNumero != null ? salleNumero : "—")
                 + " | " + ancienStatut + " → " + nouveauStatut
                 + (motifFinal != null ? " | Motif : " + motifFinal : "");
 
+        // ── Notification aux gestionnaires/admins ─────────────────
         new UtilisateurDAO().findAll().stream()
                 .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
                 .forEach(u -> {
                     Notification n = new Notification();
-                    n.setUtilisateurId(u.getId());
-                    n.setType("ANNULE".equals(nouveauStatut) ? "ALERTE" : "INFO");
-                    n.setMessage(message);
-                    n.setDateEnvoi(LocalDateTime.now());
+                    n.setUtilisateurId(u.getId()); n.setType(typeNotif);
+                    n.setMessage(message); n.setDateEnvoi(LocalDateTime.now());
                     notifDAO.save(n);
-                    if ("ANNULE".equals(nouveauStatut) && isGmail(u)) {
-                        EmailService.sendNotification(u, "❌ Cours annulé — " + matiereNom,
-                                "Bonjour " + u.getNomComplet() + ",\n\n"
-                                        + currentUser.getNomComplet() + " a annulé un cours :\n"
-                                        + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
-                                        + "  • Jour   : " + extraireJour(cours.getCreneauInfo()) + "\n"
-                                        + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
-                                        + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
-                                        + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
-                                        + "  • Motif  : " + motifFinal + "\n\nCordialement,\nUNIV-SCHEDULER");
-                    }
                 });
 
+        // ── Gmail gestionnaires si ANNULE ─────────────────────────
         if ("ANNULE".equals(nouveauStatut)) {
-            new UtilisateurDAO().findAll().stream()
-                    .filter(u -> "ETUDIANT".equals(u.getRole()) && isGmail(u))
-                    .findFirst()
-                    .ifPresent(r -> EmailService.sendNotification(r,
-                            "❌ Cours annulé — " + matiereNom + " (" + classeNom + ")",
-                            "Bonjour " + r.getNomComplet() + ",\n\n"
-                                    + "Le cours suivant a été annulé. Merci d'informer vos camarades.\n\n"
-                                    + "  • Cours  : " + matiereNom + " (" + classeNom + ")\n"
-                                    + "  • Jour   : " + extraireJour(cours.getCreneauInfo()) + "\n"
-                                    + "  • Heure  : " + extraireHeureDebut(cours.getCreneauInfo())
-                                    + " – " + extraireHeureFin(cours.getCreneauInfo()) + "\n"
-                                    + "  • Salle  : " + (salleNumero != null ? salleNumero : "—") + "\n"
-                                    + "  • Motif  : " + motifFinal + "\n\nCordialement,\nUNIV-SCHEDULER"));
+            new Thread(() ->
+                    new UtilisateurDAO().findAll().stream()
+                            .filter(u -> ("GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole())) && isGmail(u))
+                            .forEach(u -> EmailService.sendNotification(u,
+                                    "❌ Cours annulé — " + matiereNom,
+                                    "Bonjour " + u.getNomComplet() + ",\n\n"
+                                            + currentUser.getNomComplet() + " a annulé le cours :\n"
+                                            + "  Matière : " + matiereNom + " (" + classeNom + ")\n"
+                                            + "  Jour    : " + jourStr + " " + heureDebStr + " – " + heureFinStr + "\n"
+                                            + "  Salle   : " + (salleNumero != null ? salleNumero : "—") + "\n"
+                                            + "  Motif   : " + motifFinal + "\n\nCordialement,\nUNIV-SCHEDULER")),
+                    "email-annul-gests").start();
         }
 
-        loadData();
-        buildChart();
+        // ── Gmail à TOUS les étudiants de la classe ───────────────
+        if ("ANNULE".equals(nouveauStatut)) {
+            new Thread(() -> {
+                List<Utilisateur> etudiantsClasse =
+                        new ArrayList<>(new EtudiantDAO().findByClasseId(classeId));
+                for (Utilisateur etu : etudiantsClasse) {
+                    Notification nEtu = new Notification();
+                    nEtu.setUtilisateurId(etu.getId()); nEtu.setType("ALERTE");
+                    nEtu.setMessage("❌ Cours annulé : " + matiereNom
+                            + " | " + jourStr + " " + heureDebStr + " – " + heureFinStr
+                            + " | Motif : " + motifFinal
+                            + " | Enseignant : " + currentUser.getNomComplet());
+                    nEtu.setDateEnvoi(LocalDateTime.now());
+                    notifDAO.save(nEtu);
+                    if (isGmail(etu)) {
+                        EmailService.sendNotification(etu,
+                                "❌ Cours annulé — " + matiereNom + " (" + classeNom + ")",
+                                "Bonjour " + etu.getNomComplet() + ",\n\n"
+                                        + "Le cours suivant a été annulé :\n\n"
+                                        + "  Matière    : " + matiereNom + "\n"
+                                        + "  Classe     : " + classeNom + "\n"
+                                        + "  Jour       : " + jourStr + "\n"
+                                        + "  Horaire    : " + heureDebStr + " – " + heureFinStr + "\n"
+                                        + "  Salle      : " + (salleNumero != null ? salleNumero : "—") + "\n"
+                                        + "  Motif      : " + motifFinal + "\n"
+                                        + "  Enseignant : " + currentUser.getNomComplet() + "\n\n"
+                                        + "Cordialement,\nUNIV-SCHEDULER");
+                    }
+                }
+            }, "email-annul-etudiants").start();
+        }
+
+        loadData(); buildChart();
+
+        // ✅ CORRECTION message showInfo (avec accents et émojis)
         showInfo("Statut mis à jour",
                 icone + "  Cours « " + matiereNom + " »\n"
-                        + "Nouveau statut : " + nouveauStatut + "\n\n"
-                        + "✉ Le gestionnaire et le responsable de classe ont été notifiés.");
+                        + "Nouveau statut : " + nouveauStatut
+                        + ("ANNULE".equals(nouveauStatut)
+                        ? "\n\n✉ Les étudiants de la classe ont été notifiés."
+                        : "\n\n✉ Les gestionnaires ont été notifiés."));
     }
 
-    // ═══════════════════════════ DONNÉES ══════════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Données
+    // ════════════════════════════════════════════════════════════════
     private void loadData() {
         coursList.setAll(coursDAO.findByEnseignant(currentUser.getId()));
         reservList.setAll(reservDAO.findByUtilisateur(currentUser.getId()));
@@ -437,7 +713,7 @@ public class EnseignantDashboardController extends BaseController {
         buildChipsClasse();
     }
 
-    // ═══════════════════════════ CHIPS FILTRE CLASSE ══════════════
+    // ─── Chips filtre classe ──────────────────────────────────────
     private void buildChipsClasse() {
         if (chipsContainer == null) return;
         chipsContainer.getChildren().clear();
@@ -478,7 +754,8 @@ public class EnseignantDashboardController extends BaseController {
     private void appliquerFiltreClasse() {
         List<Cours> filtered = "TOUTES".equals(classeSelectionnee)
                 ? new ArrayList<>(coursList)
-                : coursList.stream().filter(c -> classeSelectionnee.equals(c.getClasseNom()))
+                : coursList.stream()
+                .filter(c -> classeSelectionnee.equals(c.getClasseNom()))
                 .collect(Collectors.toList());
         coursListFiltered.setAll(filtered);
         if (filtreResultLabel != null)
@@ -488,25 +765,16 @@ public class EnseignantDashboardController extends BaseController {
                     + " cours affiché(s) sur " + coursList.size());
     }
 
-    // ═══════════════════════════ GRAPHIQUE DONUT ══════════════════
-    /**
-     * ✅ Donut card style HR dashboard :
-     *  - anneau simulé : PieChart plein + Circle blanc par-dessus
-     *  - centre interactif : % dominant · nom · total au hover
-     *  - légende custom GridPane 2 colonnes : dot · nom · nb · %
-     *  - hover tranche ET hover ligne de légende synchronisés
-     *  - palette teal UNIV-SCHEDULER
-     */
+    // ════════════════════════════════════════════════════════════════
+    //  Graphique donut — palette teal UNIV-SCHEDULER
+    // ════════════════════════════════════════════════════════════════
     private void buildChart() {
         if (chartEnsContainer == null) return;
         chartEnsContainer.getChildren().clear();
 
-        // ── Comptage ─────────────────────────────────────────────
         Map<String, Integer> statuts = new LinkedHashMap<>();
-        for (Cours c : coursList) {
-            String s = c.getStatut() != null ? c.getStatut() : "INCONNU";
-            statuts.merge(s, 1, Integer::sum);
-        }
+        for (Cours c : coursList)
+            statuts.merge(c.getStatut() != null ? c.getStatut() : "INCONNU", 1, Integer::sum);
 
         if (statuts.isEmpty()) {
             Label vide = new Label("Aucune donnée disponible");
@@ -516,153 +784,109 @@ public class EnseignantDashboardController extends BaseController {
         }
 
         final int total = statuts.values().stream().mapToInt(Integer::intValue).sum();
+        final String dominant = statuts.entrySet().stream()
+                .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("");
+        final int    countD = statuts.getOrDefault(dominant, 0);
+        final int    pctD   = total > 0 ? Math.round(countD * 100f / total) : 0;
+        final String nomD   = LABELS_STATUT.getOrDefault(dominant, "—");
 
-        // ── Statut dominant (pour le centre par défaut) ───────────
-        final String statutDominant = statuts.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse("");
-        final int countDominant = statuts.getOrDefault(statutDominant, 0);
-        final int pctDominant   = total > 0 ? Math.round(countDominant * 100f / total) : 0;
-        final String nomDominant = LABELS_STATUT.getOrDefault(statutDominant, "—");
-
-        // ── PieChart (le trou est simulé par un Circle blanc) ─────
         PieChart pie = new PieChart();
-        pie.setLabelsVisible(false);
-        pie.setLegendVisible(false);
-        pie.setStartAngle(90);
-        pie.setPrefSize(180, 180);
-        pie.setMinSize(180, 180);
-        pie.setMaxSize(180, 180);
+        pie.setLabelsVisible(false); pie.setLegendVisible(false); pie.setStartAngle(90);
+        pie.setPrefSize(180, 180); pie.setMinSize(180, 180); pie.setMaxSize(180, 180);
         pie.setStyle("-fx-background-color:transparent;");
 
-        List<String> ordreStatuts = new ArrayList<>();
-        statuts.forEach((statut, count) -> {
-            pie.getData().add(new PieChart.Data("", count));
-            ordreStatuts.add(statut);
-        });
+        List<String> ordre = new ArrayList<>();
+        statuts.forEach((s, c) -> { pie.getData().add(new PieChart.Data("", c)); ordre.add(s); });
 
-        // ── Labels centre (réactifs) ──────────────────────────────
-        Label centerPct = new Label(pctDominant + "%");
-        centerPct.setStyle(
-                "-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
-        Label centerNom = new Label(nomDominant);
-        centerNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
-        Label centerTotal = new Label(total + " cours");
-        centerTotal.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+        Label cPct   = new Label(pctD + "%");
+        cPct.setStyle("-fx-font-size:22px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+        Label cNom   = new Label(nomD);
+        cNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+        Label cTotal = new Label(total + " cours");
+        cTotal.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
 
-        VBox centerBox = new VBox(1, centerPct, centerNom, centerTotal);
-        centerBox.setAlignment(Pos.CENTER);
-
-        // ── Circle blanc = trou donut (≈ 68 % du rayon) ──────────
+        VBox center = new VBox(1, cPct, cNom, cTotal);
+        center.setAlignment(Pos.CENTER);
         Circle hole = new Circle(60, Color.WHITE);
+        StackPane donut = new StackPane(pie, hole, center);
+        donut.setAlignment(Pos.CENTER);
+        donut.setPrefSize(186, 186); donut.setMaxSize(186, 186);
 
-        StackPane donutStack = new StackPane(pie, hole, centerBox);
-        donutStack.setAlignment(Pos.CENTER);
-        donutStack.setPrefSize(186, 186);
-        donutStack.setMaxSize(186, 186);
-
-        // ── Légende GridPane 2 colonnes ───────────────────────────
-        GridPane legendGrid = new GridPane();
-        legendGrid.setHgap(10);
-        legendGrid.setVgap(8);
-        legendGrid.setPadding(new Insets(10, 4, 4, 4));
-        legendGrid.setStyle("-fx-border-color:#e8f4f4;-fx-border-width:1 0 0 0;");
+        GridPane legend = new GridPane();
+        legend.setHgap(10); legend.setVgap(8);
+        legend.setPadding(new Insets(10, 4, 4, 4));
+        legend.setStyle("-fx-border-color:#e8f4f4;-fx-border-width:1 0 0 0;");
 
         List<Map.Entry<String, Integer>> entries = new ArrayList<>(statuts.entrySet());
         for (int i = 0; i < entries.size(); i++) {
-            final String statut  = entries.get(i).getKey();
+            final String s       = entries.get(i).getKey();
             final int    count   = entries.get(i).getValue();
             final int    pct     = total > 0 ? Math.round(count * 100f / total) : 0;
-            final String couleur = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
-            final String nom     = LABELS_STATUT.getOrDefault(statut, statut);
+            final String couleur = COULEURS_STATUT.getOrDefault(s, "#94a3b8");
+            final String nom     = LABELS_STATUT.getOrDefault(s, s);
 
             Circle dot = new Circle(5, Color.web(couleur));
-            Label lblNom = new Label(nom);
-            lblNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
-            HBox dotNom = new HBox(5, dot, lblNom);
-            dotNom.setAlignment(Pos.CENTER_LEFT);
-            Label lblNb  = new Label(String.valueOf(count));
-            lblNb.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
-            Label lblPct = new Label(pct + "%");
-            lblPct.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
-
-            VBox item = new VBox(2, dotNom, lblNb, lblPct);
-            item.setAlignment(Pos.CENTER_LEFT);
+            Label lNom = new Label(nom); lNom.setStyle("-fx-font-size:10px;-fx-text-fill:#6b8394;");
+            HBox dn = new HBox(5, dot, lNom); dn.setAlignment(Pos.CENTER_LEFT);
+            Label lN = new Label(String.valueOf(count));
+            lN.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
+            Label lP = new Label(pct + "%"); lP.setStyle("-fx-font-size:10px;-fx-text-fill:#9eb3bf;");
+            VBox item = new VBox(2, dn, lN, lP); item.setAlignment(Pos.CENTER_LEFT);
             item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
 
             item.setOnMouseEntered(e -> {
-                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;" +
-                        "-fx-background-color:#f0f9fa;");
-                centerPct.setText(pct + "%");
-                centerNom.setText(nom);
-                centerTotal.setText(count + " cours");
+                item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;-fx-background-color:#f0f9fa;");
+                cPct.setText(pct + "%"); cNom.setText(nom); cTotal.setText(count + " cours");
             });
             item.setOnMouseExited(e -> {
                 item.setStyle("-fx-cursor:hand;-fx-padding:4 6;-fx-background-radius:6;");
-                centerPct.setText(pctDominant + "%");
-                centerNom.setText(nomDominant);
-                centerTotal.setText(total + " cours");
+                cPct.setText(pctD + "%"); cNom.setText(nomD); cTotal.setText(total + " cours");
             });
-
-            legendGrid.add(item, i % 2, i / 2);
+            legend.add(item, i % 2, i / 2);
         }
 
-        // ── Couleurs + hover tranches (après rendu JavaFX) ────────
         Platform.runLater(() -> {
-            List<PieChart.Data> dataList = new ArrayList<>(pie.getData());
-            for (int i = 0; i < dataList.size() && i < ordreStatuts.size(); i++) {
-                PieChart.Data data = dataList.get(i);
-                if (data.getNode() == null) continue;
-                final String statut   = ordreStatuts.get(i);
-                final int    count    = statuts.getOrDefault(statut, 0);
-                final int    pct      = total > 0 ? Math.round(count * 100f / total) : 0;
-                final String couleur  = COULEURS_STATUT.getOrDefault(statut, "#94a3b8");
-                final String nom      = LABELS_STATUT.getOrDefault(statut, statut);
+            List<PieChart.Data> dl = new ArrayList<>(pie.getData());
+            for (int i = 0; i < dl.size() && i < ordre.size(); i++) {
+                PieChart.Data data = dl.get(i); if (data.getNode() == null) continue;
+                final String s       = ordre.get(i);
+                final String couleur = COULEURS_STATUT.getOrDefault(s, "#94a3b8");
+                final String nom     = LABELS_STATUT.getOrDefault(s, s);
+                final int    count   = statuts.getOrDefault(s, 0);
+                final int    pct     = total > 0 ? Math.round(count * 100f / total) : 0;
 
                 data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
-
                 Tooltip tip = new Tooltip(nom + "\n" + count + " cours · " + pct + "%");
-                tip.setStyle(
-                        "-fx-font-size:12px;-fx-font-weight:bold;" +
-                                "-fx-background-color:" + couleur + ";-fx-text-fill:white;" +
-                                "-fx-background-radius:6;-fx-padding:6 10;");
+                tip.setStyle("-fx-font-size:12px;-fx-font-weight:bold;" +
+                        "-fx-background-color:" + couleur + ";-fx-text-fill:white;" +
+                        "-fx-background-radius:6;-fx-padding:6 10;");
                 Tooltip.install(data.getNode(), tip);
 
                 data.getNode().setOnMouseEntered(e -> {
-                    data.getNode().setStyle(
-                            "-fx-pie-color:" + couleur +
-                                    ";-fx-scale-x:1.04;-fx-scale-y:1.04;");
-                    centerPct.setText(pct + "%");
-                    centerNom.setText(nom);
-                    centerTotal.setText(count + " cours");
+                    data.getNode().setStyle("-fx-pie-color:" + couleur + ";-fx-scale-x:1.04;-fx-scale-y:1.04;");
+                    cPct.setText(pct + "%"); cNom.setText(nom); cTotal.setText(count + " cours");
                 });
                 data.getNode().setOnMouseExited(e -> {
                     data.getNode().setStyle("-fx-pie-color:" + couleur + ";");
-                    centerPct.setText(pctDominant + "%");
-                    centerNom.setText(nomDominant);
-                    centerTotal.setText(total + " cours");
+                    cPct.setText(pctD + "%"); cNom.setText(nomD); cTotal.setText(total + " cours");
                 });
             }
         });
 
-        // ── Titre et assemblage carte ─────────────────────────────
         Label titre = new Label("Statut de mes cours");
         titre.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;");
-
-        VBox card = new VBox(8, titre, donutStack, legendGrid);
+        VBox card = new VBox(8, titre, donut, legend);
         card.setAlignment(Pos.TOP_CENTER);
         card.setPadding(new Insets(14, 12, 12, 12));
-        card.setStyle(
-                "-fx-background-color:white;" +
-                        "-fx-border-color:#c0dde4;-fx-border-width:1;" +
-                        "-fx-background-radius:12;-fx-border-radius:12;");
-        card.setPrefWidth(220);
-        card.setMaxWidth(220);
-
+        card.setStyle("-fx-background-color:white;-fx-border-color:#c0dde4;-fx-border-width:1;" +
+                "-fx-background-radius:12;-fx-border-radius:12;");
+        card.setPrefWidth(220); card.setMaxWidth(220);
         chartEnsContainer.getChildren().add(card);
     }
 
-    // ═══════════════════════════ RECHERCHE ════════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Recherche de salle
+    // ════════════════════════════════════════════════════════════════
     private void setupSearchControls() {
         if (typeFilter != null) { typeFilter.setItems(FXCollections.observableArrayList("TOUS","TD","TP","AMPHI")); typeFilter.setValue("TOUS"); }
         if (capaciteSpinner != null) capaciteSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1,500,1));
@@ -672,11 +896,13 @@ public class EnseignantDashboardController extends BaseController {
         if (heureFinReservCombo != null) { heureFinReservCombo.setItems(FXCollections.observableArrayList(HEURES)); heureFinReservCombo.setValue("10:00"); }
         if (datePicker       != null && datePicker.getValue()       == null) datePicker.setValue(LocalDate.now());
         if (dateReservPicker != null && dateReservPicker.getValue() == null) dateReservPicker.setValue(LocalDate.now());
-        if (salleReservCombo    != null) salleReservCombo.setOnAction(e -> checkReservConflict());
+        if (salleReservCombo != null) {
+            salleReservCombo.setOnAction(e -> checkReservConflict());
+            salleReservCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
+        }
         if (dateReservPicker    != null) dateReservPicker.setOnAction(e -> checkReservConflict());
         if (heureReservCombo    != null) heureReservCombo.setOnAction(e -> checkReservConflict());
         if (heureFinReservCombo != null) heureFinReservCombo.setOnAction(e -> checkReservConflict());
-        salleReservCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
     }
 
     private void setupSalleTable() {
@@ -690,15 +916,15 @@ public class EnseignantDashboardController extends BaseController {
             return new SimpleStringProperty(eq.isEmpty() ? "—" : String.join(", ", eq));
         });
         salleLibreTable.setItems(salleList);
-        salleLibreTable.getSelectionModel().selectedItemProperty().addListener((o,old,s) -> {
-            if (s != null) { salleReservCombo.setValue(s); checkReservConflict(); }
+        salleLibreTable.getSelectionModel().selectedItemProperty().addListener((o, old, s) -> {
+            if (s != null && salleReservCombo != null) { salleReservCombo.setValue(s); checkReservConflict(); }
         });
     }
 
     @FXML private void handleRechercherSalles() {
         if (salleLibreTable == null) return;
-        int cap    = capaciteSpinner != null ? capaciteSpinner.getValue() : 1;
-        String t   = typeFilter      != null ? typeFilter.getValue()      : null;
+        int cap = capaciteSpinner != null ? capaciteSpinner.getValue() : 1;
+        String t = typeFilter != null ? typeFilter.getValue() : null;
         String type = (t == null || "TOUS".equals(t)) ? null : t;
         List<String> equips = new ArrayList<>();
         if (checkProjecteur != null && checkProjecteur.isSelected()) equips.add("PROJECTEUR");
@@ -721,10 +947,13 @@ public class EnseignantDashboardController extends BaseController {
                     ? "-fx-text-fill:#dc2626;-fx-font-weight:bold;"
                     : "-fx-text-fill:#16a34a;-fx-font-weight:bold;");
         }
-        salleReservCombo.setItems(FXCollections.observableArrayList(result.isEmpty() ? salleDAO.findAll() : result));
+        if (salleReservCombo != null)
+            salleReservCombo.setItems(FXCollections.observableArrayList(result.isEmpty() ? salleDAO.findAll() : result));
     }
 
-    // ═══════════════════════════ RÉSERVATION ══════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Réservation
+    // ════════════════════════════════════════════════════════════════
     private void setupReservTable() {
         colResMotif.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getMotif()));
         colResSalle.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getSalleNumero()));
@@ -732,7 +961,7 @@ public class EnseignantDashboardController extends BaseController {
                 d.getValue().getDateReservation() != null ? d.getValue().getDateReservation().toLocalDate().toString() : ""));
         colResStatut.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getStatut()));
         reservTable.setItems(reservList);
-        reservTable.getSelectionModel().selectedItemProperty().addListener((o,old,r) -> selectedReserv = r);
+        reservTable.getSelectionModel().selectedItemProperty().addListener((o, old, r) -> selectedReserv = r);
     }
 
     private void checkReservConflict() {
@@ -772,24 +1001,22 @@ public class EnseignantDashboardController extends BaseController {
         }
         Reservation r = new Reservation();
         r.setSalleId(s.getId()); r.setMotif(motif);
-        r.setDateReservation(d.atTime(debut, 0));
-        r.setDateFin(d.atTime(fin, 0));
+        r.setDateReservation(d.atTime(debut, 0)); r.setDateFin(d.atTime(fin, 0));
         r.setStatut("EN_ATTENTE"); r.setUtilisateurId(currentUser.getId());
-        reservDAO.save(r);
-        r.setSalleNumero(s.getNumero());
-        final String hDebFinal = hDeb;
-        final int finFinal = fin;
-        new UtilisateurDAO().findAll().stream()
-                .filter(u -> "GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole()))
-                .filter(u -> isGmail(u))
-                .forEach(u -> EmailService.sendNotification(u,
-                        "📋 Nouvelle demande de réservation — " + s.getNumero(),
-                        "Bonjour " + u.getNomComplet() + ",\n\n"
-                                + currentUser.getNomComplet() + " a soumis une réservation :\n"
-                                + "  • Salle  : " + s.getNumero() + "\n"
-                                + "  • Date   : " + d + "\n"
-                                + "  • Heure  : " + hDebFinal + " → " + finFinal + ":00\n"
-                                + "  • Motif  : " + motif + "\n\nCordialement,\nUNIV-SCHEDULER"));
+        reservDAO.save(r); r.setSalleNumero(s.getNumero());
+        final String hDebFinal = hDeb; final int finFinal = fin;
+        new Thread(() ->
+                new UtilisateurDAO().findAll().stream()
+                        .filter(u -> ("GESTIONNAIRE".equals(u.getRole()) || "ADMIN".equals(u.getRole())) && isGmail(u))
+                        .forEach(u -> EmailService.sendNotification(u,
+                                "📋 Nouvelle demande de réservation — " + s.getNumero(),
+                                "Bonjour " + u.getNomComplet() + ",\n\n"
+                                        + currentUser.getNomComplet() + " a soumis une réservation :\n"
+                                        + "  Salle  : " + s.getNumero() + "\n"
+                                        + "  Date   : " + d + "\n"
+                                        + "  Heure  : " + hDebFinal + " → " + finFinal + ":00\n"
+                                        + "  Motif  : " + motif + "\n\nCordialement,\nUNIV-SCHEDULER")),
+                "email-reserv").start();
         if (motifField          != null) motifField.clear();
         if (salleReservCombo    != null) salleReservCombo.setValue(null);
         if (heureFinReservCombo != null) heureFinReservCombo.setValue("10:00");
@@ -807,9 +1034,11 @@ public class EnseignantDashboardController extends BaseController {
         if (confirmDelete("cette réservation")) { reservDAO.delete(selectedReserv.getId()); loadData(); }
     }
 
-    // ═══════════════════════════ NOTIFICATIONS ════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Notifications table
+    // ════════════════════════════════════════════════════════════════
     private void setupNotifTable() {
-        if (notifTable == null) return;
+        if (notifTable   == null) return;
         if (colNotifMsg  != null) colNotifMsg.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getMessage()));
         if (colNotifType != null) colNotifType.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getType()));
         if (colNotifDate != null) colNotifDate.setCellValueFactory(d -> new SimpleStringProperty(
@@ -819,13 +1048,13 @@ public class EnseignantDashboardController extends BaseController {
 
     @FXML private void handleMarkAllRead() { notifDAO.markAllRead(currentUser.getId()); loadData(); }
 
-    // ═══════════════════════════ SIGNALEMENT ══════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Signalement
+    // ════════════════════════════════════════════════════════════════
     private void setupSignalementForm() {
-        if (sigCategorieCombo != null) sigCategorieCombo.setItems(FXCollections.observableArrayList("EQUIPEMENT","SALLE","AUTRE"));
-        if (sigPrioriteCombo  != null) sigPrioriteCombo.setItems(FXCollections.observableArrayList("BASSE","NORMALE","HAUTE","URGENTE"));
+        if (sigCategorieCombo != null) { sigCategorieCombo.setItems(FXCollections.observableArrayList("EQUIPEMENT","SALLE","AUTRE")); sigCategorieCombo.setValue("EQUIPEMENT"); }
+        if (sigPrioriteCombo  != null) { sigPrioriteCombo.setItems(FXCollections.observableArrayList("BASSE","NORMALE","HAUTE","URGENTE")); sigPrioriteCombo.setValue("NORMALE"); }
         if (sigSalleCombo     != null) sigSalleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
-        if (sigCategorieCombo != null) sigCategorieCombo.setValue("EQUIPEMENT");
-        if (sigPrioriteCombo  != null) sigPrioriteCombo.setValue("NORMALE");
         if (sigFeedbackLabel  != null) sigFeedbackLabel.setVisible(false);
     }
 
@@ -878,16 +1107,15 @@ public class EnseignantDashboardController extends BaseController {
                             + " | Par : " + currentUser.getNomComplet());
                     notifDAO.save(n);
                 });
-        if (isGmail(currentUser)) {
+        if (isGmail(currentUser))
             EmailService.sendNotification(currentUser,
                     "✅ Signalement #" + sig.getId() + " enregistré",
                     "Bonjour " + currentUser.getNomComplet() + ",\n\n"
                             + "Votre signalement a bien été transmis à l'administration :\n"
-                            + "  • Titre    : " + sig.getTitre() + "\n"
-                            + "  • Priorité : " + sig.getPriorite() + "\n"
-                            + "  • Salle    : " + (sig.getSalleNumero() != null ? sig.getSalleNumero() : "—") + "\n\n"
+                            + "  Titre    : " + sig.getTitre() + "\n"
+                            + "  Priorité : " + sig.getPriorite() + "\n"
+                            + "  Salle    : " + (sig.getSalleNumero() != null ? sig.getSalleNumero() : "—") + "\n\n"
                             + "Cordialement,\nUNIV-SCHEDULER");
-        }
         showFeedback("✅ Signalement #" + sig.getId() + " transmis à l'administration.", true);
         clearSignalementForm(); loadData();
     }
@@ -943,7 +1171,9 @@ public class EnseignantDashboardController extends BaseController {
         }
     }
 
-    // ═══════════════════════════ EXPORTS ══════════════════════════
+    // ════════════════════════════════════════════════════════════════
+    //  Exports
+    // ════════════════════════════════════════════════════════════════
     @FXML private void handleExportPDF() {
         FileChooser fc = new FileChooser(); fc.setTitle("Exporter mon emploi du temps en PDF");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF","*.pdf")); fc.setInitialFileName("mon_edt.pdf");
@@ -960,11 +1190,7 @@ public class EnseignantDashboardController extends BaseController {
         catch (Exception e) { showError("Erreur", e.getMessage()); }
     }
 
-    @FXML private void handleLogout() {
-        arreterRappelStatutCours();
-        Servicerappel.getInstance().arreter();
-        logout();
-    }
-
+    @FXML protected void openChatbot() { AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet()); }
+    @FXML private void handleLogout()  { arreterRappelStatutCours(); Servicerappel.getInstance().arreter(); logout(); }
     @FXML private void handleRefresh() { loadData(); buildChart(); }
 }

@@ -2,6 +2,7 @@ package com.univscheduler.controller;
 
 import com.univscheduler.dao.*;
 import com.univscheduler.model.*;
+import com.univscheduler.model.Examen;
 import com.univscheduler.service.*;
 import com.univscheduler.model.AlertePersonnalisee;
 import com.univscheduler.service.EmailService;
@@ -63,6 +64,14 @@ public class GestionnaireDashboardController extends BaseController {
     @FXML private TextArea         signalCommentArea;
     @FXML private ComboBox<String> signalStatutCombo;
 
+    // ─── EXAMENS & DEVOIRS ───
+    @FXML private TableView<Examen>     examenTable;
+    @FXML private TableColumn<Examen, String> colExType, colExEns, colExTitre,
+            colExClasse, colExMatiere, colExDate, colExSalle, colExStatut;
+    @FXML private ComboBox<String> examenFiltreCombo;
+    @FXML private TextField        examenMotifField;
+    @FXML private Label            examenBadge, examenInfoLabel, examenActionFeedback;
+
     // ── Palette teal ──────────────────────────────────────────────
     private static final String T_DARK   = "#1a5f6e";
     private static final String T_MID    = "#2a9cb0";
@@ -94,6 +103,7 @@ public class GestionnaireDashboardController extends BaseController {
     private final SignalementDAO  signalDAO      = new SignalementDAO();
     private final RapportService  rapportService = new RapportService();
     private final ExportService   exportService  = new ExportService();
+    private final ExamenService   examenService  = new ExamenService();
 
     private final ObservableList<Cours>       coursList        = FXCollections.observableArrayList();
     private final ObservableList<Cours>       coursListFiltree = FXCollections.observableArrayList();
@@ -120,7 +130,7 @@ public class GestionnaireDashboardController extends BaseController {
         creneauCombo.setItems(FXCollections.observableArrayList(creneauDAO.findAll()));
         salleCombo.setItems(FXCollections.observableArrayList(salleDAO.findAll()));
         statutCombo.setItems(FXCollections.observableArrayList("PLANIFIE","EN_COURS","TERMINE","ANNULE"));
-        if (conflitLabel  != null) { conflitLabel.setVisible(false); conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"); }
+        if (conflitLabel   != null) { conflitLabel.setVisible(false);  conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"); }
         if (salleAutoLabel != null) salleAutoLabel.setVisible(false);
         styleBoutonVue(false);
         loadData(); buildRapportDashboard(); buildCharts(); buildCalendar(); buildCarteSalles();
@@ -129,6 +139,141 @@ public class GestionnaireDashboardController extends BaseController {
         classeCombo.setOnAction(e  -> { checkConflict(); assignerSalleAutomatique(); });
         creneauCombo.setOnAction(e -> { checkConflict(); assignerSalleAutomatique(); });
         datePicker.setOnAction(e   -> { checkConflict(); assignerSalleAutomatique(); });
+        initExamenTab();
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  EXAMENS & DEVOIRS — côté Gestionnaire
+    // ════════════════════════════════════════════════════════════════
+
+    private void initExamenTab() {
+        if (examenTable == null) return;
+
+        // ── Colonnes ──────────────────────────────────────────────
+        if (colExType    != null) colExType.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getTypeIcon() + " " + d.getValue().getType()));
+        if (colExEns     != null) colExEns.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getEnseignantNom()));
+        if (colExTitre   != null) colExTitre.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getTitre()));
+        if (colExClasse  != null) colExClasse.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getClasseNom()));
+        if (colExMatiere != null) colExMatiere.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getMatiereNom()));
+        if (colExDate    != null) colExDate.setCellValueFactory(d ->
+                new SimpleStringProperty(formatDateExam(d.getValue().getDateExamen())));
+        if (colExSalle   != null) colExSalle.setCellValueFactory(d ->
+                new SimpleStringProperty(nvlStr(d.getValue().getSalleNumero(), "Maison")));
+        if (colExStatut  != null) colExStatut.setCellValueFactory(d ->
+                new SimpleStringProperty(d.getValue().getStatutAffichage()));
+
+        examenTable.setRowFactory(tv -> new TableRow<Examen>() {
+            @Override protected void updateItem(Examen item, boolean empty) {
+                super.updateItem(item, empty);
+                if (item == null || empty) { setStyle(""); return; }
+                switch (item.getStatut()) {
+                    case Examen.STATUT_VALIDE: setStyle("-fx-background-color:#dcfce7;"); break;
+                    case Examen.STATUT_REFUSE: setStyle("-fx-background-color:#fee2e2;"); break;
+                    default:                   setStyle("-fx-background-color:#eff6ff;"); break;
+                }
+            }
+        });
+
+        // ── Filtres ───────────────────────────────────────────────
+        if (examenFiltreCombo != null) {
+            examenFiltreCombo.setItems(FXCollections.observableArrayList(
+                    "Toutes", "En attente", "Validées", "Refusées"));
+            examenFiltreCombo.setValue("En attente");
+            examenFiltreCombo.setOnAction(e -> handleFiltreExamens());
+        }
+        if (examenActionFeedback != null) examenActionFeedback.setVisible(false);
+
+        handleRefreshExamens();
+    }
+
+    @FXML
+    public void handleRefreshExamens() {
+        if (examenTable == null) return;
+        long nb = examenService.countEnAttente();
+        if (examenBadge != null) {
+            examenBadge.setText(nb > 0 ? "🔴 " + nb + " en attente" : "");
+            examenBadge.setVisible(nb > 0);
+        }
+        handleFiltreExamens();
+    }
+
+    @FXML
+    private void handleFiltreExamens() {
+        List<Examen> toutes = examenService.getTousLesExamens();
+        String filtre = examenFiltreCombo != null ? examenFiltreCombo.getValue() : "Toutes";
+        List<Examen> filtrees = switch (filtre != null ? filtre : "") {
+            case "En attente" -> toutes.stream().filter(e -> Examen.STATUT_EN_ATTENTE.equals(e.getStatut())).collect(Collectors.toList());
+            case "Validées"   -> toutes.stream().filter(e -> Examen.STATUT_VALIDE.equals(e.getStatut())).collect(Collectors.toList());
+            case "Refusées"   -> toutes.stream().filter(e -> Examen.STATUT_REFUSE.equals(e.getStatut())).collect(Collectors.toList());
+            default           -> toutes;
+        };
+        examenTable.setItems(FXCollections.observableArrayList(filtrees));
+        if (examenInfoLabel != null)
+            examenInfoLabel.setText(filtrees.size() + " demande(s)");
+    }
+
+    @FXML
+    private void handleValiderExamen() {
+        Examen selected = examenTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showError("Sélection", "Sélectionnez une demande."); return; }
+        if (!Examen.STATUT_EN_ATTENTE.equals(selected.getStatut())) {
+            showError("Impossible", "Cette demande a déjà été traitée."); return;
+        }
+        String motif = examenMotifField != null ? examenMotifField.getText().trim() : "";
+        boolean ok   = examenService.valider(selected.getId(), motif);
+        if (ok) {
+            showExamenActionFeedback("✅ Demande validée ! L'enseignant a été notifié.", "#16a34a");
+        } else {
+            showExamenActionFeedback("⚠️ Conflit salle détecté. Demande refusée automatiquement.", "#d97706");
+        }
+        if (examenMotifField != null) examenMotifField.clear();
+        handleRefreshExamens();
+        loadData();
+    }
+
+    @FXML
+    private void handleRefuserExamen() {
+        Examen selected = examenTable.getSelectionModel().getSelectedItem();
+        if (selected == null) { showError("Sélection", "Sélectionnez une demande."); return; }
+        if (!Examen.STATUT_EN_ATTENTE.equals(selected.getStatut())) {
+            showError("Impossible", "Cette demande a déjà été traitée."); return;
+        }
+        String motif = examenMotifField != null ? examenMotifField.getText().trim() : "Refusé par le gestionnaire.";
+        examenService.refuser(selected.getId(), motif);
+        showExamenActionFeedback("❌ Demande refusée. L'enseignant a été notifié.", "#ef4444");
+        if (examenMotifField != null) examenMotifField.clear();
+        handleRefreshExamens();
+    }
+
+    private void showExamenActionFeedback(String msg, String color) {
+        if (examenActionFeedback == null) return;
+        examenActionFeedback.setText(msg);
+        examenActionFeedback.setStyle("-fx-text-fill:" + color + ";-fx-font-weight:bold;");
+        examenActionFeedback.setVisible(true);
+        javafx.animation.PauseTransition p =
+                new javafx.animation.PauseTransition(javafx.util.Duration.seconds(4));
+        p.setOnFinished(e -> examenActionFeedback.setVisible(false));
+        p.play();
+    }
+
+    /** Formate "2026-05-12T09:00:00" → "12/05/2026 à 09:00" */
+    private String formatDateExam(String d) {
+        if (d == null || d.isEmpty()) return "—";
+        try {
+            String[] parts = d.split("T");
+            String[] ymd   = parts[0].split("-");
+            return ymd[2] + "/" + ymd[1] + "/" + ymd[0]
+                    + " à " + (parts.length > 1 ? parts[1].substring(0, 5) : "");
+        } catch (Exception e) { return d; }
+    }
+
+    private String nvlStr(String s, String def) {
+        return (s != null && !s.isBlank()) ? s : def;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -184,16 +329,12 @@ public class GestionnaireDashboardController extends BaseController {
         pills.getChildren().addAll(pill("↓ Tendance", RED_BG, RED), pill("Objectif: 60%", GOLD_BG, GOLD));
         rapportGaugeContainer.getChildren().add(pills);
 
-        // ✅ CORRECTION : countLibresAujourdhui() au lieu de countDisponibles()
-        // countDisponibles() = flag maintenance (toujours 40 même si cours planifiés)
-        // countLibresAujourdhui() = réellement libres aujourd'hui (sans cours planifié/en cours)
         long sallesLibresAujourdhui = salleDAO.countLibresAujourdhui();
-
         HBox mini = new HBox(20); mini.setAlignment(Pos.CENTER);
         mini.setPadding(new Insets(8, 0, 0, 0));
         mini.getChildren().addAll(
-                miniStat(String.valueOf(totSal),               "Total salles", T_MID),
-                miniStat(String.valueOf(critList.size()),      "Critiques",    RED),
+                miniStat(String.valueOf(totSal),                "Total salles", T_MID),
+                miniStat(String.valueOf(critList.size()),       "Critiques",    RED),
                 miniStat(String.valueOf(sallesLibresAujourdhui),"Libres auj.", GREEN)
         );
         rapportGaugeContainer.getChildren().add(mini);
@@ -264,7 +405,7 @@ public class GestionnaireDashboardController extends BaseController {
         rapportTrendContainer.setPadding(new Insets(20));
 
         double[] rates = computeWeekRates(6);
-        double prev = rates.length >= 2 ? rates[rates.length - 2] : 38;
+        double prev    = rates.length >= 2 ? rates[rates.length - 2] : 38;
         double current = rates.length >= 1 ? rates[rates.length - 1] : 82;
         boolean hausse = current >= prev;
 
@@ -309,7 +450,7 @@ public class GestionnaireDashboardController extends BaseController {
         VBox aiTexts = new VBox(3); HBox.setHgrow(aiTexts, Priority.ALWAYS);
         HBox aiTitle = new HBox(5); aiTitle.setAlignment(Pos.CENTER_LEFT);
         Label aiArrow = new Label(hausse?"↑":"↓"); aiArrow.setStyle("-fx-text-fill:"+(hausse?GREEN:RED)+";-fx-font-size:14px;-fx-font-weight:bold;");
-        Label aiLbl = new Label("Analyse IA"); aiLbl.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label aiLbl   = new Label("Analyse IA"); aiLbl.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         aiTitle.getChildren().addAll(aiArrow, aiLbl);
         String salleCrit = critList.isEmpty() ? "B03-TD" : critList.get(0).getNumero();
         String jourMax   = getJourPlusCharge();
@@ -328,8 +469,8 @@ public class GestionnaireDashboardController extends BaseController {
         rapportHealthContainer.getChildren().add(cardHeader("Santé des Salles", "Vue globale occupation"));
 
         Map<String, Double> taux = rapportService.getTauxOccupation();
-        double global = rapportService.getTauxOccupationGlobal();
-        int    total  = Math.max(1, taux.size());
+        double global  = rapportService.getTauxOccupationGlobal();
+        int    total   = Math.max(1, taux.size());
         long   surOcc  = taux.values().stream().filter(t -> t >= 80).count();
         long   sousOcc = taux.values().stream().filter(t -> t < 10).count();
         double pctSur  = (surOcc  * 100.0) / total;
@@ -337,7 +478,7 @@ public class GestionnaireDashboardController extends BaseController {
 
         HBox metricsRow = new HBox(20); metricsRow.setAlignment(Pos.CENTER_LEFT);
         metricsRow.getChildren().addAll(
-                healthMetric(String.format("%.0f%%", global), "Overall Health"),
+                healthMetric(String.format("%.0f%%", global),  "Overall Health"),
                 healthMetric(String.format("%.0f%%", pctSur),  "Overcapacity"),
                 healthMetric(String.format("%.0f%%", pctSous), "Undercapacity")
         );
@@ -345,8 +486,8 @@ public class GestionnaireDashboardController extends BaseController {
 
         HBox barsRow = new HBox(18); barsRow.setAlignment(Pos.BOTTOM_LEFT);
         barsRow.setPrefHeight(120); barsRow.setPadding(new Insets(8, 0, 0, 0));
-        barsRow.getChildren().add(barreVerticale(global, T_MID, false));
-        barsRow.getChildren().add(barreVerticale(pctSur, T_DARK, true));
+        barsRow.getChildren().add(barreVerticale(global,  T_MID,  false));
+        barsRow.getChildren().add(barreVerticale(pctSur,  T_DARK, true));
         barsRow.getChildren().add(barreVerticaleLight(pctSous, T_LIGHT));
         rapportHealthContainer.getChildren().add(barsRow);
 
@@ -359,7 +500,7 @@ public class GestionnaireDashboardController extends BaseController {
     private HBox cardHeader(String title, String subtitle) {
         HBox h = new HBox(); h.setAlignment(Pos.CENTER_LEFT);
         VBox tx = new VBox(2);
-        Label t = new Label(title); t.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
+        Label t = new Label(title);    t.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:"+T_DARK+";");
         Label s = new Label(subtitle); s.setStyle("-fx-font-size:11px;-fx-text-fill:"+SECOND+";");
         tx.getChildren().addAll(t, s);
         Region e = new Region(); HBox.setHgrow(e, Priority.ALWAYS);
@@ -567,7 +708,6 @@ public class GestionnaireDashboardController extends BaseController {
         notifDAO.markAllRead(currentUser.getId());refreshNotifBadge();
         AlertePersonnalisee.afficherNotifications(notifs);
     }
-    /** Ouvre le chatbot */
     @FXML protected void openChatbot() {
         AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet());
     }
@@ -626,7 +766,7 @@ public class GestionnaireDashboardController extends BaseController {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  Carte Salles — ✅ countLibresAujourdhui() au lieu de countDisponibles()
+    //  Carte Salles
     // ════════════════════════════════════════════════════════════════
     private void buildCarteSalles(){
         if(carteContainer==null)return;carteContainer.getChildren().clear();
@@ -664,7 +804,6 @@ public class GestionnaireDashboardController extends BaseController {
             }
             batBox.getChildren().addAll(batLbl,fp);all.getChildren().add(batBox);
         }
-        // ✅ countLibresAujourdhui() = réellement libres (pas de cours planifié aujourd'hui)
         long libresAujourdhui = salleDAO.countLibresAujourdhui();
         Label global=new Label(String.format(
                 "📊 Taux global : %.1f%%  |  Salles critiques : %d  |  Libres aujourd'hui : %d",
@@ -736,20 +875,13 @@ public class GestionnaireDashboardController extends BaseController {
         int excl=selectedCours!=null?selectedCours.getId():0;
         boolean cs=coursDAO.hasConflitSalle(s.getId(),cr.getId(),d.toString(),excl);
         boolean ce=en!=null&&coursDAO.hasConflitEnseignant(en.getId(),cr.getId(),d.toString(),excl);
-        // ✅ FIX : vérification visuelle UNIQUEMENT — PLUS d'email ici.
-        // AlerteService.alerterConflit() était déclenché à chaque changement
-        // de combo (salle, enseignant, créneau, date) → un email par champ
-        // modifié = spam + freeze UI ("Java ne répond pas").
-        // L'alerte email est envoyée uniquement lors de la sauvegarde réelle.
         if(cs){
             conflitLabel.setText("⚠ CONFLIT : Salle déjà occupée !");
-            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"
-                    +"-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
+            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
             conflitLabel.setVisible(true);
         } else if(ce){
             conflitLabel.setText("⚠ CONFLIT : Enseignant indisponible !");
-            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;"
-                    +"-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
+            conflitLabel.setStyle("-fx-text-fill:"+RED+";-fx-font-weight:bold;-fx-background-color:#fee2e2;-fx-background-radius:6;-fx-padding:4 8;");
             conflitLabel.setVisible(true);
         } else {
             conflitLabel.setVisible(false);
@@ -778,8 +910,6 @@ public class GestionnaireDashboardController extends BaseController {
         Cours c=selectedCours!=null?selectedCours:new Cours();
         c.setMatiereId(matiereCombo.getValue().getId());c.setEnseignantId(enseignantCombo.getValue().getId());c.setClasseId(classeCombo.getValue().getId());c.setCreneauId(creneauCombo.getValue().getId());c.setSalleId(salleCombo.getValue().getId());c.setDate(datePicker.getValue());c.setStatut(statutCombo.getValue()!=null?statutCombo.getValue():"PLANIFIE");
         coursDAO.save(c);
-        // ✅ FIX : emails envoyés dans un Thread background
-        // → ne bloque plus le thread JavaFX UI
         if(ancSalle!=null&&!ancSalle.equals(salleCombo.getValue().getNumero())){
             Utilisateur en=enseignantCombo.getValue();
             c.setSalleNumero(salleCombo.getValue().getNumero());
@@ -804,7 +934,6 @@ public class GestionnaireDashboardController extends BaseController {
         if(selectedReserv==null){showError("Erreur","Sélectionnez une réservation.");return;}
         reservDAO.updateStatut(selectedReserv.getId(),"VALIDEE");
         Notification n=new Notification();n.setMessage("✅ Votre réservation salle "+selectedReserv.getSalleNumero()+" a été validée.");n.setType("INFO");n.setUtilisateurId(selectedReserv.getUtilisateurId());notifDAO.save(n);
-        // ✅ Email en background thread — ne bloque pas l'UI
         final Reservation rFinal = selectedReserv;
         utilisateurDAO.findAll().stream().filter(u->u.getId()==rFinal.getUtilisateurId())
                 .findFirst().ifPresent(u -> {
@@ -818,7 +947,6 @@ public class GestionnaireDashboardController extends BaseController {
         if(selectedReserv==null){showError("Erreur","Sélectionnez une réservation.");return;}
         reservDAO.updateStatut(selectedReserv.getId(),"REFUSEE");
         Notification n=new Notification();n.setMessage("❌ Votre réservation salle "+selectedReserv.getSalleNumero()+" a été refusée.");n.setType("ALERTE");n.setUtilisateurId(selectedReserv.getUtilisateurId());notifDAO.save(n);
-        // ✅ Email en background thread
         final Reservation rRefus = selectedReserv;
         utilisateurDAO.findAll().stream().filter(u->u.getId()==rRefus.getUtilisateurId())
                 .findFirst().ifPresent(u -> {
@@ -850,11 +978,11 @@ public class GestionnaireDashboardController extends BaseController {
 
     @FunctionalInterface interface ExportAction{void run(File f)throws Exception;}
     private void doExport(String type,String name,ExportAction a){FileChooser fc=new FileChooser();fc.getExtensionFilters().add(new FileChooser.ExtensionFilter(type,"*."+name.substring(name.lastIndexOf('.')+1)));fc.setInitialFileName(name);File f=fc.showSaveDialog(null);if(f==null)return;try{a.run(f);showInfo("Export "+type,"Exporté : "+f.getName());}catch(Exception e){showError("Erreur",e.getMessage());}}
-    @FXML private void handleExportPDF()             {doExport("PDF",  "emploi_du_temps.pdf",          f->exportService.exportCoursAsPDF(coursList,f));}
-    @FXML private void handleExportExcel()           {doExport("Excel","emploi_du_temps.xlsx",          f->exportService.exportCoursAsExcel(coursList,f));}
-    @FXML private void handleExportHistoriquePDF()   {doExport("PDF",  "historique_reservations.pdf",   f->exportService.exportReservationsAsPDF(reservDAO.findAll(),f));}
-    @FXML private void handleExportHistoriqueExcel() {doExport("Excel","historique_reservations.xlsx",  f->exportService.exportReservationsAsExcel(reservDAO.findAll(),f));}
-    @FXML private void handleExportOccupationExcel() {doExport("Excel","occupation_salles.xlsx",        f->exportService.exportOccupationAsExcel(rapportService.getTauxOccupation(),f));}
+    @FXML private void handleExportPDF()             {doExport("PDF",  "emploi_du_temps.pdf",         f->exportService.exportCoursAsPDF(coursList,f));}
+    @FXML private void handleExportExcel()           {doExport("Excel","emploi_du_temps.xlsx",         f->exportService.exportCoursAsExcel(coursList,f));}
+    @FXML private void handleExportHistoriquePDF()   {doExport("PDF",  "historique_reservations.pdf",  f->exportService.exportReservationsAsPDF(reservDAO.findAll(),f));}
+    @FXML private void handleExportHistoriqueExcel() {doExport("Excel","historique_reservations.xlsx", f->exportService.exportReservationsAsExcel(reservDAO.findAll(),f));}
+    @FXML private void handleExportOccupationExcel() {doExport("Excel","occupation_salles.xlsx",       f->exportService.exportOccupationAsExcel(rapportService.getTauxOccupation(),f));}
 
     @FXML private void handleRapportHebdo(){
         Map<String,Object>r=rapportService.getRapportHebdomadaire();
@@ -867,11 +995,11 @@ public class GestionnaireDashboardController extends BaseController {
         buildOccupationChart();critList.setAll(rapportService.getSallesCritiques());buildRapportDashboard();
     }
 
-    @FXML private void handleRefreshRapport(){loadData();buildRapportDashboard();buildCharts();}
-    @FXML private void handleRafraichirCarte(){buildCarteSalles();}
-    @FXML private void handleClearCours()    {clearForm();}
-    @FXML private void handleLogout()        {logout();}
-    @FXML private void handleRefresh()       {loadData();}
+    @FXML private void handleRefreshRapport() {loadData();buildRapportDashboard();buildCharts();}
+    @FXML private void handleRafraichirCarte() {buildCarteSalles();}
+    @FXML private void handleClearCours()     {clearForm();}
+    @FXML private void handleLogout()         {logout();}
+    @FXML private void handleRefresh()        {loadData();}
 
     private void fillForm(Cours c){
         coursFormTitle.setText("Modifier Cours");

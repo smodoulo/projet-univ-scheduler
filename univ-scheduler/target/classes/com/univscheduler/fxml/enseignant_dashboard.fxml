@@ -246,6 +246,132 @@
                             </TableView>
                         </VBox>
                     </Tab>
+                    <Tab text="📝 Examens &amp; Devoirs" closable="false">
+                        <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
+                            <VBox spacing="16" style="-fx-padding:16;">
+
+                                <!-- En-tête -->
+                                <HBox alignment="CENTER_LEFT" spacing="12">
+                                    <Label text="📝 Programmer un Examen ou Devoir"
+                                           style="-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;"
+                                           HBox.hgrow="ALWAYS"/>
+                                    <Button text="🔄 Actualiser" styleClass="btn-secondary"
+                                            onAction="#handleRefreshExamens"/>
+                                </HBox>
+
+                                <!-- ── Formulaire ── -->
+                                <VBox styleClass="form-panel" spacing="12">
+                                    <Label text="Nouvelle Demande" styleClass="form-title"/>
+
+                                    <!-- Ligne 1 : Type + Titre -->
+                                    <HBox spacing="14">
+                                        <VBox spacing="5" prefWidth="170">
+                                            <Label text="Type *" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenTypeCombo" maxWidth="Infinity"
+                                                      promptText="Choisir..."/>
+                                        </VBox>
+                                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                            <Label text="Titre *" styleClass="form-label"/>
+                                            <TextField fx:id="examenTitreField"
+                                                       promptText="Ex: Examen final Algorithmique S2..."
+                                                       styleClass="form-field"/>
+                                        </VBox>
+                                    </HBox>
+
+                                    <!-- Ligne 2 : Classe + Matière -->
+                                    <HBox spacing="14">
+                                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                            <Label text="Classe *" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenClasseCombo" maxWidth="Infinity"
+                                                      promptText="Sélectionner la classe..."/>
+                                        </VBox>
+                                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                            <Label text="Matière" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenMatiereCombo" maxWidth="Infinity"
+                                                      promptText="Sélectionner la matière..."/>
+                                        </VBox>
+                                    </HBox>
+
+                                    <!-- Ligne 3 : Date + Heure + Durée -->
+                                    <HBox spacing="14" alignment="CENTER_LEFT">
+                                        <VBox spacing="5" prefWidth="160">
+                                            <Label text="Date *" styleClass="form-label"/>
+                                            <DatePicker fx:id="examenDatePicker" maxWidth="Infinity"/>
+                                        </VBox>
+                                        <VBox spacing="5" prefWidth="110">
+                                            <Label text="Heure *" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenHeureCombo" maxWidth="Infinity"
+                                                      promptText="Heure..."/>
+                                        </VBox>
+                                        <VBox spacing="5" prefWidth="130">
+                                            <Label text="Durée (minutes)" styleClass="form-label"/>
+                                            <Spinner fx:id="examenDureeSpinner" prefWidth="130"
+                                                     editable="true"/>
+                                        </VBox>
+                                    </HBox>
+
+                                    <!-- Ligne 4 : Salle (optionnel pour devoirs maison) -->
+                                    <HBox spacing="14" alignment="CENTER_LEFT">
+                                        <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                            <Label text="Salle (optionnel — laisser vide pour devoir à la maison)"
+                                                   styleClass="form-label"/>
+                                            <ComboBox fx:id="examenSalleCombo" maxWidth="Infinity"
+                                                      promptText="Aucune salle (devoir à la maison)"/>
+                                        </VBox>
+                                        <VBox spacing="5" alignment="BOTTOM_LEFT" minWidth="140">
+                                            <Label fx:id="examenConflitLabel" text="" wrapText="true"
+                                                   style="-fx-font-size:11px;-fx-font-weight:bold;" visible="false"/>
+                                        </VBox>
+                                    </HBox>
+
+                                    <!-- Ligne 5 : Description / instructions -->
+                                    <VBox spacing="5">
+                                        <Label text="Description / Instructions (optionnel)" styleClass="form-label"/>
+                                        <TextArea fx:id="examenDescArea"
+                                                  promptText="Chapitres concernés, barème, matériel autorisé, consignes..."
+                                                  prefRowCount="3" wrapText="true"/>
+                                    </VBox>
+
+                                    <!-- Feedback + Boutons -->
+                                    <Label fx:id="examenFeedbackLabel" text="" visible="false" wrapText="true"
+                                           style="-fx-font-weight:bold;-fx-font-size:12px;-fx-padding:6 10;
+                              -fx-background-radius:6;"/>
+                                    <HBox spacing="12" alignment="CENTER_LEFT">
+                                        <Button text="📤 Soumettre pour validation"
+                                                styleClass="btn-primary"
+                                                onAction="#handleSoumettreExamen"
+                                                style="-fx-padding:10 24;"/>
+                                        <Button text="✕ Effacer" styleClass="btn-secondary"
+                                                onAction="#handleClearExamen"/>
+                                        <Label text="ℹ La demande sera envoyée au gestionnaire pour validation."
+                                               style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"
+                                               HBox.hgrow="ALWAYS"/>
+                                    </HBox>
+                                </VBox>
+
+                                <!-- ── Mes demandes ── -->
+                                <Label text="Mes Demandes" styleClass="section-title"/>
+                                <TableView fx:id="examenTable" prefHeight="300" styleClass="data-table">
+                                    <columns>
+                                        <TableColumn fx:id="colExType"    text="Type"    prefWidth="90"/>
+                                        <TableColumn fx:id="colExTitre"   text="Titre"   prefWidth="180"/>
+                                        <TableColumn fx:id="colExClasse"  text="Classe"  prefWidth="110"/>
+                                        <TableColumn fx:id="colExMatiere" text="Matière" prefWidth="130"/>
+                                        <TableColumn fx:id="colExDate"    text="Date"    prefWidth="130"/>
+                                        <TableColumn fx:id="colExSalle"   text="Salle"   prefWidth="80"/>
+                                        <TableColumn fx:id="colExStatut"  text="Statut"  prefWidth="120"/>
+                                        <TableColumn fx:id="colExComm"    text="Commentaire gestionnaire" prefWidth="200"/>
+                                    </columns>
+                                    <placeholder>
+                                        <Label text="Aucune demande soumise."
+                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
+                                    </placeholder>
+                                </TableView>
+
+                            </VBox>
+                        </ScrollPane>
+                    </Tab>
+
 
                 </TabPane>
             </VBox>
