@@ -1,34 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.EnseignantDashboardController"
             styleClass="root-pane">
     <top>
         <HBox styleClass="navbar" alignment="CENTER_LEFT" spacing="16">
-            <Label text="🎓 UNIV-SCHEDULER" styleClass="nav-logo"/>
+            <FontIcon iconLiteral="fas-graduation-cap" iconSize="22" iconColor="#a8d8e2"/>
+            <Label text="UNIV-SCHEDULER" styleClass="nav-logo"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="Enseignant" styleClass="nav-role-badge-orange"/>
-
-            <!-- ✅ MODIFIÉ : notifBadge devient un Button cliquable -->
-            <Button fx:id="notifBadgeBtn"
-                    text="🔔 Aucune nouvelle"
-                    onAction="#handleOpenNotifications"
-                    style="-fx-background-color:transparent;-fx-text-fill:#64748b;
+            <Button fx:id="notifBadgeBtn" onAction="#handleOpenNotifications"
+                    style="-fx-background-color:transparent;-fx-text-fill:#a8d8e2;
                            -fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;
-                           -fx-background-radius:20;-fx-border-color:#e2e8f0;
-                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"/>
-
+                           -fx-background-radius:20;-fx-border-color:rgba(255,255,255,0.25);
+                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;">
+                <graphic><FontIcon iconLiteral="fas-bell" iconSize="13" iconColor="#a8d8e2"/></graphic>
+                <text>Aucune nouvelle</text>
+            </Button>
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
-            <Button text="🤖 Assistant"
-                    onAction="#openChatbot"
-                    style="-fx-background-color:#6366f1;-fx-text-fill:white;
-                           -fx-font-weight:bold;-fx-padding:6 14;
-                           -fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;"/>
-            <Button text="Déconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
+            <Button onAction="#openChatbot"
+                    style="-fx-background-color:#6366f1;-fx-text-fill:white;-fx-font-weight:bold;
+                           -fx-padding:6 14;-fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;">
+                <graphic><FontIcon iconLiteral="fas-robot" iconSize="13" iconColor="white"/></graphic>
+                <text>Assistant</text>
+            </Button>
+            <Button styleClass="btn-logout" onAction="#handleLogout">
+                <graphic><FontIcon iconLiteral="fas-sign-out-alt" iconSize="13" iconColor="white"/></graphic>
+                <text>Deconnexion</text>
+            </Button>
         </HBox>
     </top>
-
     <center>
         <ScrollPane fitToWidth="true">
             <VBox spacing="16" style="-fx-padding:20;">
@@ -37,97 +40,98 @@
                         <Label fx:id="totalCoursLabel" text="Mes cours : 0" styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-green" HBox.hgrow="ALWAYS">
-                        <Label fx:id="totalReservsLabel" text="Mes réservations : 0" styleClass="stat-value-small"/>
+                        <Label fx:id="totalReservsLabel" text="Mes reservations : 0" styleClass="stat-value-small"/>
                     </VBox>
                 </HBox>
                 <TabPane>
-
-                    <!-- ─── ONGLET 1 : EDT ─── -->
-                    <Tab text="📅 Mon Emploi du Temps" closable="false">
+                    <!-- Tab 1 : EDT -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-calendar-alt" iconSize="13" iconColor="#2a9cb0"/><Label text="Mon Emploi du Temps"/></HBox></graphic>
                         <HBox spacing="16">
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
-                                <Label text="Mes cours assignés" styleClass="section-title"/>
-
-                                <!-- CHIPS FILTRE PAR CLASSE -->
-                                <VBox spacing="6"
-                                      style="-fx-padding:10 12;-fx-background-color:#f8fafc;
-                                             -fx-background-radius:10;-fx-border-radius:10;
-                                             -fx-border-color:#e2e8f0;-fx-border-width:1;">
-                                    <Label text="🎓 Filtrer par classe"
-                                           style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#475569;"/>
-                                    <FlowPane fx:id="chipsContainer" hgap="8" vgap="6"
-                                              style="-fx-padding:4 0 2 0;"/>
-                                    <Label fx:id="filtreResultLabel" text=""
-                                           style="-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;"/>
+                                <Label text="Mes cours assignes" styleClass="section-title"/>
+                                <VBox spacing="6" style="-fx-padding:10 12;-fx-background-color:#f8fafc;-fx-background-radius:10;-fx-border-radius:10;-fx-border-color:#e2e8f0;-fx-border-width:1;">
+                                    <HBox spacing="6" alignment="CENTER_LEFT">
+                                        <FontIcon iconLiteral="fas-graduation-cap" iconSize="12" iconColor="#475569"/>
+                                        <Label text="Filtrer par classe" style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#475569;"/>
+                                    </HBox>
+                                    <FlowPane fx:id="chipsContainer" hgap="8" vgap="6" style="-fx-padding:4 0 2 0;"/>
+                                    <Label fx:id="filtreResultLabel" text="" style="-fx-font-size:11px;-fx-text-fill:#64748b;-fx-font-style:italic;"/>
                                 </VBox>
-
                                 <TableView fx:id="coursTable" prefHeight="360" styleClass="data-table">
                                     <columns>
-                                        <TableColumn fx:id="colMat"        text="Matière"  prefWidth="150"/>
+                                        <TableColumn fx:id="colMat"        text="Matiere"  prefWidth="150"/>
                                         <TableColumn fx:id="colCls"        text="Classe"   prefWidth="95"/>
                                         <TableColumn fx:id="colCren"       text="Jour"     prefWidth="90"/>
-                                        <TableColumn fx:id="colHeureDebut" text="Début"    prefWidth="60"/>
+                                        <TableColumn fx:id="colHeureDebut" text="Debut"    prefWidth="60"/>
                                         <TableColumn fx:id="colHeureFin"   text="Fin"      prefWidth="60"/>
                                         <TableColumn fx:id="colSalle"      text="Salle"    prefWidth="75"/>
                                         <TableColumn fx:id="colDate"       text="Date"     prefWidth="100"/>
                                         <TableColumn fx:id="colStatut"     text="Statut"   prefWidth="95"/>
                                     </columns>
-                                    <placeholder>
-                                        <Label text="Aucun cours pour cette classe."
-                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                    </placeholder>
+                                    <placeholder><Label text="Aucun cours pour cette classe." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                                 </TableView>
                                 <HBox spacing="8">
-                                    <Button text="📄 Export PDF"   styleClass="btn-secondary" onAction="#handleExportPDF"/>
-                                    <Button text="📊 Export Excel" styleClass="btn-secondary" onAction="#handleExportExcel"/>
+                                    <Button styleClass="btn-secondary" onAction="#handleExportPDF">
+                                        <graphic><FontIcon iconLiteral="fas-file-pdf" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                        <text>Export PDF</text>
+                                    </Button>
+                                    <Button styleClass="btn-secondary" onAction="#handleExportExcel">
+                                        <graphic><FontIcon iconLiteral="fas-file-excel" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                        <text>Export Excel</text>
+                                    </Button>
                                 </HBox>
                             </VBox>
-
-                            <!-- ✅ MODIFIÉ : Graphique camembert — panel élargi pour les labels -->
                             <VBox styleClass="form-panel" minWidth="280" maxWidth="280" spacing="8">
-                                <Label text="📊 Mes Cours par Statut" styleClass="form-title"/>
+                                <Label text="Mes Cours par Statut" styleClass="form-title"/>
                                 <VBox fx:id="chartEnsContainer" minHeight="260"/>
                             </VBox>
                         </HBox>
                     </Tab>
-
-                    <!-- ─── ONGLET 2 : RÉSERVATION ─── -->
-                    <Tab text="📌 Réserver une Salle" closable="false">
+                    <!-- Tab 2 : Reservation -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-bookmark" iconSize="13" iconColor="#2a9cb0"/><Label text="Reserver une Salle"/></HBox></graphic>
                         <HBox spacing="16">
                             <VBox HBox.hgrow="ALWAYS" spacing="12">
                                 <VBox styleClass="form-panel" spacing="10">
-                                    <Label text="🔍 Recherche rapide de salle disponible" styleClass="form-title"/>
+                                    <HBox spacing="6" alignment="CENTER_LEFT">
+                                        <FontIcon iconLiteral="fas-search" iconSize="14" iconColor="#1a5f6e"/>
+                                        <Label text="Recherche rapide de salle disponible" styleClass="form-title"/>
+                                    </HBox>
                                     <HBox spacing="10" alignment="CENTER_LEFT">
                                         <Label text="Date :" styleClass="form-label"/>
                                         <DatePicker fx:id="datePicker" prefWidth="160"/>
-                                        <Label text="De :" styleClass="form-label"/>
+                                        <Label text="De :"  styleClass="form-label"/>
                                         <ComboBox fx:id="heureDebutCombo" prefWidth="85"/>
-                                        <Label text="À :" styleClass="form-label"/>
+                                        <Label text="A :"   styleClass="form-label"/>
                                         <ComboBox fx:id="heureFinCombo" prefWidth="85"/>
-                                        <Label text="Cap.≥" styleClass="form-label"/>
+                                        <Label text="Cap.>=" styleClass="form-label"/>
                                         <Spinner fx:id="capaciteSpinner" prefWidth="75" editable="true"/>
                                     </HBox>
                                     <HBox spacing="10" alignment="CENTER_LEFT">
                                         <Label text="Type :" styleClass="form-label"/>
                                         <ComboBox fx:id="typeFilter" prefWidth="120"/>
-                                        <CheckBox fx:id="checkProjecteur" text="📽 Projecteur"/>
-                                        <CheckBox fx:id="checkTableau"    text="🖊 Tableau"/>
-                                        <CheckBox fx:id="checkClim"       text="❄ Clim"/>
-                                        <Button text="🔍 Chercher" styleClass="btn-primary" onAction="#handleRechercherSalles"/>
+                                        <CheckBox fx:id="checkProjecteur" text="Projecteur"/>
+                                        <CheckBox fx:id="checkTableau"    text="Tableau"/>
+                                        <CheckBox fx:id="checkClim"       text="Clim"/>
+                                        <Button styleClass="btn-primary" onAction="#handleRechercherSalles">
+                                            <graphic><FontIcon iconLiteral="fas-search" iconSize="12" iconColor="white"/></graphic>
+                                            <text>Chercher</text>
+                                        </Button>
                                     </HBox>
                                     <Label fx:id="resultLabel" text="" style="-fx-font-size:12px;" wrapText="true"/>
                                     <TableView fx:id="salleLibreTable" prefHeight="180" styleClass="data-table">
                                         <columns>
                                             <TableColumn fx:id="colSalleNum"   text="Salle"       prefWidth="80"/>
                                             <TableColumn fx:id="colSalleType"  text="Type"        prefWidth="70"/>
-                                            <TableColumn fx:id="colSalleCap"   text="Capacité"    prefWidth="80"/>
-                                            <TableColumn fx:id="colSalleBat"   text="Bâtiment"    prefWidth="140"/>
-                                            <TableColumn fx:id="colSalleEquip" text="Équipements" prefWidth="200"/>
+                                            <TableColumn fx:id="colSalleCap"   text="Capacite"    prefWidth="80"/>
+                                            <TableColumn fx:id="colSalleBat"   text="Batiment"    prefWidth="140"/>
+                                            <TableColumn fx:id="colSalleEquip" text="Equipements" prefWidth="200"/>
                                         </columns>
                                     </TableView>
                                 </VBox>
                                 <VBox spacing="8">
-                                    <Label text="Mes réservations" styleClass="section-title"/>
+                                    <Label text="Mes reservations" styleClass="section-title"/>
                                     <TableView fx:id="reservTable" prefHeight="220" styleClass="data-table">
                                         <columns>
                                             <TableColumn fx:id="colResMotif"  text="Motif"  prefWidth="200"/>
@@ -136,106 +140,111 @@
                                             <TableColumn fx:id="colResStatut" text="Statut" prefWidth="110"/>
                                         </columns>
                                     </TableView>
-                                    <Button text="🗑 Annuler réservation" styleClass="btn-danger" onAction="#handleDeleteReservation"/>
+                                    <Button styleClass="btn-danger" onAction="#handleDeleteReservation">
+                                        <graphic><FontIcon iconLiteral="fas-trash" iconSize="12" iconColor="white"/></graphic>
+                                        <text>Annuler reservation</text>
+                                    </Button>
                                 </VBox>
                             </VBox>
-
                             <VBox styleClass="form-panel" spacing="12" minWidth="270" maxWidth="270">
-                                <Label text="📋 Nouvelle Réservation" styleClass="form-title"/>
+                                <Label text="Nouvelle Reservation" styleClass="form-title"/>
                                 <Label text="Salle choisie" styleClass="form-label"/>
-                                <ComboBox fx:id="salleReservCombo" maxWidth="Infinity" promptText="Sélectionner..."/>
+                                <ComboBox fx:id="salleReservCombo" maxWidth="Infinity" promptText="Selectionner..."/>
                                 <Label text="Date" styleClass="form-label"/>
                                 <DatePicker fx:id="dateReservPicker" maxWidth="Infinity"/>
-                                <Label text="Heure de début" styleClass="form-label"/>
+                                <Label text="Heure de debut" styleClass="form-label"/>
                                 <ComboBox fx:id="heureReservCombo" maxWidth="Infinity"/>
                                 <Label text="Heure de fin" styleClass="form-label"/>
                                 <ComboBox fx:id="heureFinReservCombo" maxWidth="Infinity"/>
                                 <Label text="Motif" styleClass="form-label"/>
-                                <TextField fx:id="motifField" promptText="Ex: Soutenance, Réunion..." styleClass="form-field"/>
-                                <Label fx:id="conflitReservLabel" text="" wrapText="true"
-                                       style="-fx-font-size:11px;" visible="false"/>
-                                <Button text="📨 Enregistrer la réservation" styleClass="btn-primary"
-                                        maxWidth="Infinity" onAction="#handleSaveReservation"/>
-                                <Label text="ℹ La réservation sera soumise à validation."
-                                       style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"/>
+                                <TextField fx:id="motifField" promptText="Ex: Soutenance, Reunion..." styleClass="form-field"/>
+                                <Label fx:id="conflitReservLabel" text="" wrapText="true" style="-fx-font-size:11px;" visible="false"/>
+                                <Button styleClass="btn-primary" maxWidth="Infinity" onAction="#handleSaveReservation">
+                                    <graphic><FontIcon iconLiteral="fas-paper-plane" iconSize="13" iconColor="white"/></graphic>
+                                    <text>Enregistrer la reservation</text>
+                                </Button>
+                                <HBox spacing="5" alignment="CENTER_LEFT">
+                                    <FontIcon iconLiteral="fas-info-circle" iconSize="11" iconColor="#64748b"/>
+                                    <Label text="La reservation sera soumise a validation." style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"/>
+                                </HBox>
                             </VBox>
                         </HBox>
                     </Tab>
-
-                    <!-- ─── ONGLET 3 : SIGNALEMENT ─── -->
-                    <Tab text="⚠ Signaler un Problème" closable="false">
+                    <!-- Tab 3 : Signalement -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-exclamation-triangle" iconSize="13" iconColor="#f0a500"/><Label text="Signaler un Probleme"/></HBox></graphic>
                         <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
                             <VBox spacing="16" style="-fx-padding:16;">
                                 <VBox spacing="12" styleClass="form-panel">
-                                    <Label text="📋 Nouveau Signalement" styleClass="form-title"/>
+                                    <Label text="Nouveau Signalement" styleClass="form-title"/>
                                     <VBox spacing="4">
-                                        <Label text="Titre  *  (obligatoire)"
-                                               style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#dc2626;"/>
-                                        <TextField fx:id="sigTitreField"
-                                                   promptText="Ex: Vidéoprojecteur en panne, Tableau cassé..."
-                                                   styleClass="form-field"/>
+                                        <Label text="Titre (obligatoire)" style="-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:#dc2626;"/>
+                                        <TextField fx:id="sigTitreField" promptText="Ex: Videoprojecteur en panne..." styleClass="form-field"/>
                                     </VBox>
                                     <HBox spacing="12">
                                         <VBox spacing="4" HBox.hgrow="ALWAYS">
-                                            <Label text="Catégorie" styleClass="form-label"/>
+                                            <Label text="Categorie" styleClass="form-label"/>
                                             <ComboBox fx:id="sigCategorieCombo" maxWidth="Infinity"/>
                                         </VBox>
                                         <VBox spacing="4" HBox.hgrow="ALWAYS">
-                                            <Label text="Priorité" styleClass="form-label"/>
+                                            <Label text="Priorite" styleClass="form-label"/>
                                             <ComboBox fx:id="sigPrioriteCombo" maxWidth="Infinity"/>
                                         </VBox>
                                     </HBox>
                                     <VBox spacing="4">
-                                        <Label text="Salle concernée  (optionnel)" styleClass="form-label"/>
-                                        <ComboBox fx:id="sigSalleCombo" maxWidth="Infinity"
-                                                  promptText="Sélectionnez la salle..."/>
+                                        <Label text="Salle concernee (optionnel)" styleClass="form-label"/>
+                                        <ComboBox fx:id="sigSalleCombo" maxWidth="Infinity" promptText="Selectionnez la salle..."/>
                                     </VBox>
                                     <VBox spacing="4">
-                                        <Label text="Description du problème" styleClass="form-label"/>
-                                        <TextArea fx:id="sigDescArea"
-                                                  promptText="Décrivez le problème : depuis quand, symptômes observés..."
-                                                  prefRowCount="4" wrapText="true"/>
+                                        <Label text="Description du probleme" styleClass="form-label"/>
+                                        <TextArea fx:id="sigDescArea" promptText="Decrivez le probleme : depuis quand, symptomes observes..." prefRowCount="4" wrapText="true"/>
                                     </VBox>
-                                    <Label fx:id="sigFeedbackLabel" text="" visible="false" wrapText="true"
-                                           style="-fx-font-size:13px;-fx-font-weight:bold;-fx-padding:6 10;-fx-background-radius:6;"/>
+                                    <Label fx:id="sigFeedbackLabel" text="" visible="false" wrapText="true" style="-fx-font-size:13px;-fx-font-weight:bold;-fx-padding:6 10;-fx-background-radius:6;"/>
                                     <HBox alignment="CENTER_RIGHT">
-                                        <Button text="📤  Envoyer le signalement" styleClass="btn-primary"
-                                                onAction="#handleSendProbleme" style="-fx-padding:10 24;"/>
+                                        <Button styleClass="btn-primary" onAction="#handleSendProbleme" style="-fx-padding:10 24;">
+                                            <graphic><FontIcon iconLiteral="fas-paper-plane" iconSize="13" iconColor="white"/></graphic>
+                                            <text>Envoyer le signalement</text>
+                                        </Button>
                                     </HBox>
                                 </VBox>
                                 <VBox spacing="10" styleClass="form-panel">
                                     <HBox alignment="CENTER_LEFT" spacing="12">
-                                        <Label text="📋  Mes Signalements" styleClass="form-title" HBox.hgrow="ALWAYS"/>
-                                        <Label fx:id="sigBadge" text="" visible="false"
-                                               style="-fx-background-color:#dcfce7;-fx-text-fill:#166534;-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;"/>
-                                        <Button text="🔍 Voir détail" styleClass="btn-secondary" onAction="#handleVoirMonSignalement"/>
-                                        <Button text="🔄 Actualiser"  styleClass="btn-secondary" onAction="#handleRefresh"/>
+                                        <Label text="Mes Signalements" styleClass="form-title" HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="sigBadge" text="" visible="false" style="-fx-background-color:#dcfce7;-fx-text-fill:#166534;-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;"/>
+                                        <Button styleClass="btn-secondary" onAction="#handleVoirMonSignalement">
+                                            <graphic><FontIcon iconLiteral="fas-search" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                            <text>Voir detail</text>
+                                        </Button>
+                                        <Button styleClass="btn-secondary" onAction="#handleRefresh">
+                                            <graphic><FontIcon iconLiteral="fas-sync-alt" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                            <text>Actualiser</text>
+                                        </Button>
                                     </HBox>
                                     <TableView fx:id="mesSignalementsTable" prefHeight="240" styleClass="data-table">
                                         <columns>
                                             <TableColumn fx:id="colSigTitre"  text="Titre"     prefWidth="220"/>
-                                            <TableColumn fx:id="colSigCat"    text="Catégorie" prefWidth="110"/>
-                                            <TableColumn fx:id="colSigPrio"   text="Priorité"  prefWidth="110"/>
+                                            <TableColumn fx:id="colSigCat"    text="Categorie" prefWidth="110"/>
+                                            <TableColumn fx:id="colSigPrio"   text="Priorite"  prefWidth="110"/>
                                             <TableColumn fx:id="colSigStatut" text="Statut"    prefWidth="130"/>
                                             <TableColumn fx:id="colSigDate"   text="Date"      prefWidth="100"/>
                                             <TableColumn fx:id="colSigSalle"  text="Salle"     prefWidth="80"/>
                                         </columns>
-                                        <placeholder>
-                                            <Label text="Aucun signalement pour le moment."
-                                                   style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                        </placeholder>
+                                        <placeholder><Label text="Aucun signalement pour le moment." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                                     </TableView>
                                 </VBox>
                             </VBox>
                         </ScrollPane>
                     </Tab>
-
-                    <!-- ─── ONGLET 4 : NOTIFICATIONS ─── -->
-                    <Tab text="🔔 Notifications" closable="false">
+                    <!-- Tab 4 : Notifications -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-bell" iconSize="13" iconColor="#2a9cb0"/><Label text="Notifications"/></HBox></graphic>
                         <VBox spacing="10">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <Label text="Mes Notifications" styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="✓ Tout marquer comme lu" styleClass="btn-secondary" onAction="#handleMarkAllRead"/>
+                                <Button styleClass="btn-secondary" onAction="#handleMarkAllRead">
+                                    <graphic><FontIcon iconLiteral="fas-check-double" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                    <text>Tout marquer comme lu</text>
+                                </Button>
                             </HBox>
                             <TableView fx:id="notifTable" prefHeight="420" styleClass="data-table">
                                 <columns>
@@ -246,53 +255,41 @@
                             </TableView>
                         </VBox>
                     </Tab>
-                    <Tab text="📝 Examens &amp; Devoirs" closable="false">
+                    <!-- Tab 5 : Examens -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-edit" iconSize="13" iconColor="#2a9cb0"/><Label text="Examens et Devoirs"/></HBox></graphic>
                         <ScrollPane fitToWidth="true" style="-fx-background-color:transparent;">
                             <VBox spacing="16" style="-fx-padding:16;">
-
-                                <!-- En-tête -->
                                 <HBox alignment="CENTER_LEFT" spacing="12">
-                                    <Label text="📝 Programmer un Examen ou Devoir"
-                                           style="-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;"
-                                           HBox.hgrow="ALWAYS"/>
-                                    <Button text="🔄 Actualiser" styleClass="btn-secondary"
-                                            onAction="#handleRefreshExamens"/>
+                                    <FontIcon iconLiteral="fas-edit" iconSize="16" iconColor="#1a5f6e"/>
+                                    <Label text="Programmer un Examen ou Devoir" style="-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:#1a5f6e;" HBox.hgrow="ALWAYS"/>
+                                    <Button styleClass="btn-secondary" onAction="#handleRefreshExamens">
+                                        <graphic><FontIcon iconLiteral="fas-sync-alt" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                        <text>Actualiser</text>
+                                    </Button>
                                 </HBox>
-
-                                <!-- ── Formulaire ── -->
                                 <VBox styleClass="form-panel" spacing="12">
                                     <Label text="Nouvelle Demande" styleClass="form-title"/>
-
-                                    <!-- Ligne 1 : Type + Titre -->
                                     <HBox spacing="14">
                                         <VBox spacing="5" prefWidth="170">
                                             <Label text="Type *" styleClass="form-label"/>
-                                            <ComboBox fx:id="examenTypeCombo" maxWidth="Infinity"
-                                                      promptText="Choisir..."/>
+                                            <ComboBox fx:id="examenTypeCombo" maxWidth="Infinity" promptText="Choisir..."/>
                                         </VBox>
                                         <VBox spacing="5" HBox.hgrow="ALWAYS">
                                             <Label text="Titre *" styleClass="form-label"/>
-                                            <TextField fx:id="examenTitreField"
-                                                       promptText="Ex: Examen final Algorithmique S2..."
-                                                       styleClass="form-field"/>
+                                            <TextField fx:id="examenTitreField" promptText="Ex: Examen final Algorithmique S2..." styleClass="form-field"/>
                                         </VBox>
                                     </HBox>
-
-                                    <!-- Ligne 2 : Classe + Matière -->
                                     <HBox spacing="14">
                                         <VBox spacing="5" HBox.hgrow="ALWAYS">
                                             <Label text="Classe *" styleClass="form-label"/>
-                                            <ComboBox fx:id="examenClasseCombo" maxWidth="Infinity"
-                                                      promptText="Sélectionner la classe..."/>
+                                            <ComboBox fx:id="examenClasseCombo" maxWidth="Infinity" promptText="Selectionner la classe..."/>
                                         </VBox>
                                         <VBox spacing="5" HBox.hgrow="ALWAYS">
-                                            <Label text="Matière" styleClass="form-label"/>
-                                            <ComboBox fx:id="examenMatiereCombo" maxWidth="Infinity"
-                                                      promptText="Sélectionner la matière..."/>
+                                            <Label text="Matiere" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenMatiereCombo" maxWidth="Infinity" promptText="Selectionner la matiere..."/>
                                         </VBox>
                                     </HBox>
-
-                                    <!-- Ligne 3 : Date + Heure + Durée -->
                                     <HBox spacing="14" alignment="CENTER_LEFT">
                                         <VBox spacing="5" prefWidth="160">
                                             <Label text="Date *" styleClass="form-label"/>
@@ -300,79 +297,59 @@
                                         </VBox>
                                         <VBox spacing="5" prefWidth="110">
                                             <Label text="Heure *" styleClass="form-label"/>
-                                            <ComboBox fx:id="examenHeureCombo" maxWidth="Infinity"
-                                                      promptText="Heure..."/>
+                                            <ComboBox fx:id="examenHeureCombo" maxWidth="Infinity" promptText="Heure..."/>
                                         </VBox>
                                         <VBox spacing="5" prefWidth="130">
-                                            <Label text="Durée (minutes)" styleClass="form-label"/>
-                                            <Spinner fx:id="examenDureeSpinner" prefWidth="130"
-                                                     editable="true"/>
+                                            <Label text="Duree (minutes)" styleClass="form-label"/>
+                                            <Spinner fx:id="examenDureeSpinner" prefWidth="130" editable="true"/>
                                         </VBox>
                                     </HBox>
-
-                                    <!-- Ligne 4 : Salle (optionnel pour devoirs maison) -->
                                     <HBox spacing="14" alignment="CENTER_LEFT">
                                         <VBox spacing="5" HBox.hgrow="ALWAYS">
-                                            <Label text="Salle (optionnel — laisser vide pour devoir à la maison)"
-                                                   styleClass="form-label"/>
-                                            <ComboBox fx:id="examenSalleCombo" maxWidth="Infinity"
-                                                      promptText="Aucune salle (devoir à la maison)"/>
+                                            <Label text="Salle (optionnel)" styleClass="form-label"/>
+                                            <ComboBox fx:id="examenSalleCombo" maxWidth="Infinity" promptText="Aucune salle (devoir a la maison)"/>
                                         </VBox>
                                         <VBox spacing="5" alignment="BOTTOM_LEFT" minWidth="140">
-                                            <Label fx:id="examenConflitLabel" text="" wrapText="true"
-                                                   style="-fx-font-size:11px;-fx-font-weight:bold;" visible="false"/>
+                                            <Label fx:id="examenConflitLabel" text="" wrapText="true" style="-fx-font-size:11px;-fx-font-weight:bold;" visible="false"/>
                                         </VBox>
                                     </HBox>
-
-                                    <!-- Ligne 5 : Description / instructions -->
                                     <VBox spacing="5">
                                         <Label text="Description / Instructions (optionnel)" styleClass="form-label"/>
-                                        <TextArea fx:id="examenDescArea"
-                                                  promptText="Chapitres concernés, barème, matériel autorisé, consignes..."
-                                                  prefRowCount="3" wrapText="true"/>
+                                        <TextArea fx:id="examenDescArea" promptText="Chapitres concernes, bareme, materiel autorise..." prefRowCount="3" wrapText="true"/>
                                     </VBox>
-
-                                    <!-- Feedback + Boutons -->
-                                    <Label fx:id="examenFeedbackLabel" text="" visible="false" wrapText="true"
-                                           style="-fx-font-weight:bold;-fx-font-size:12px;-fx-padding:6 10;
-                              -fx-background-radius:6;"/>
+                                    <Label fx:id="examenFeedbackLabel" text="" visible="false" wrapText="true" style="-fx-font-weight:bold;-fx-font-size:12px;-fx-padding:6 10;-fx-background-radius:6;"/>
                                     <HBox spacing="12" alignment="CENTER_LEFT">
-                                        <Button text="📤 Soumettre pour validation"
-                                                styleClass="btn-primary"
-                                                onAction="#handleSoumettreExamen"
-                                                style="-fx-padding:10 24;"/>
-                                        <Button text="✕ Effacer" styleClass="btn-secondary"
-                                                onAction="#handleClearExamen"/>
-                                        <Label text="ℹ La demande sera envoyée au gestionnaire pour validation."
-                                               style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"
-                                               HBox.hgrow="ALWAYS"/>
+                                        <Button styleClass="btn-primary" onAction="#handleSoumettreExamen" style="-fx-padding:10 24;">
+                                            <graphic><FontIcon iconLiteral="fas-paper-plane" iconSize="13" iconColor="white"/></graphic>
+                                            <text>Soumettre pour validation</text>
+                                        </Button>
+                                        <Button styleClass="btn-secondary" onAction="#handleClearExamen">
+                                            <graphic><FontIcon iconLiteral="fas-times" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                            <text>Effacer</text>
+                                        </Button>
+                                        <HBox spacing="5" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                            <FontIcon iconLiteral="fas-info-circle" iconSize="11" iconColor="#64748b"/>
+                                            <Label text="La demande sera envoyee au gestionnaire pour validation." style="-fx-text-fill:#64748b;-fx-font-size:10px;" wrapText="true"/>
+                                        </HBox>
                                     </HBox>
                                 </VBox>
-
-                                <!-- ── Mes demandes ── -->
                                 <Label text="Mes Demandes" styleClass="section-title"/>
                                 <TableView fx:id="examenTable" prefHeight="300" styleClass="data-table">
                                     <columns>
                                         <TableColumn fx:id="colExType"    text="Type"    prefWidth="90"/>
                                         <TableColumn fx:id="colExTitre"   text="Titre"   prefWidth="180"/>
                                         <TableColumn fx:id="colExClasse"  text="Classe"  prefWidth="110"/>
-                                        <TableColumn fx:id="colExMatiere" text="Matière" prefWidth="130"/>
+                                        <TableColumn fx:id="colExMatiere" text="Matiere" prefWidth="130"/>
                                         <TableColumn fx:id="colExDate"    text="Date"    prefWidth="130"/>
                                         <TableColumn fx:id="colExSalle"   text="Salle"   prefWidth="80"/>
                                         <TableColumn fx:id="colExStatut"  text="Statut"  prefWidth="120"/>
                                         <TableColumn fx:id="colExComm"    text="Commentaire gestionnaire" prefWidth="200"/>
                                     </columns>
-                                    <placeholder>
-                                        <Label text="Aucune demande soumise."
-                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                    </placeholder>
+                                    <placeholder><Label text="Aucune demande soumise." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                                 </TableView>
-
                             </VBox>
                         </ScrollPane>
                     </Tab>
-
-
                 </TabPane>
             </VBox>
         </ScrollPane>

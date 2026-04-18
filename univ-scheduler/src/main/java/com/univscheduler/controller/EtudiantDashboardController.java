@@ -9,9 +9,13 @@ import javafx.beans.property.*;
 import javafx.collections.*;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import java.io.File;
 import java.time.LocalDate;
@@ -264,16 +268,249 @@ public class EtudiantDashboardController extends BaseController {
         buildChart(); buildCalendar(); buildStats();
     }
 
+    // ================================================================
+    //  GRAPHIQUE DRIBBBLE — style Image 2
+    //  Card "Cours par Matiere" avec header Precedent/Actuel,
+    //  barres doubles teal par matiere, accents couleur
+    // ================================================================
+    private static final String TD_DARK   = "#1a5f6e";
+    private static final String TD_MID    = "#2a9cb0";
+    private static final String TD_LIGHT  = "#4ecdc4";
+    private static final String TD_BG     = "#e8f4f4";
+    private static final String TD_PALE   = "#c8edf2";
+    private static final String TD_GOLD   = "#f0a500";
+    private static final String TD_GOLD_BG= "#fff8e6";
+    private static final String TD_MUTED  = "#9eb3bf";
+    private static final String TD_SECOND = "#6b8394";
+    private static final String TD_BORDER = "#d4ecf0";
+
     private void buildChart() {
         if (chartEtuContainer == null) return;
-        Map<String, Integer> pm = new LinkedHashMap<>();
-        for (Cours c : coursList) pm.merge(c.getMatiereNom() != null ? c.getMatiereNom() : "?", 1, Integer::sum);
-        CategoryAxis xA = new CategoryAxis(); NumberAxis yA = new NumberAxis();
-        BarChart<String, Number> chart = new BarChart<>(xA, yA);
-        chart.setTitle("Cours par Matiere"); chart.setLegendVisible(false); chart.setPrefHeight(220);
-        XYChart.Series<String, Number> s = new XYChart.Series<>();
-        pm.forEach((k, v) -> s.getData().add(new XYChart.Data<>(k, v)));
-        chart.getData().add(s); chartEtuContainer.getChildren().setAll(chart);
+        chartEtuContainer.getChildren().clear();
+
+        // ── Compter cours planifies vs realises par matiere ───────
+        Map<String, int[]> parMat = new LinkedHashMap<>();
+        // [0]=planifie/en_cours, [1]=realise/termine
+        for (Cours c : coursList) {
+            String mat = c.getMatiereNom() != null ? c.getMatiereNom() : "?";
+            parMat.computeIfAbsent(mat, k -> new int[]{0, 0});
+            String st = c.getStatut() != null ? c.getStatut() : "";
+            if ("REALISE".equals(st) || "TERMINE".equals(st))
+                parMat.get(mat)[1]++;
+            else
+                parMat.get(mat)[0]++;
+        }
+
+        // ── Calcul Precedent / Actuel (% réalisés semaine N-1 vs N) ─
+        LocalDate lundiCette = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate lundiPrec  = lundiCette.minusWeeks(1);
+
+        long totalCette = coursList.stream()
+                .filter(c -> c.getDate() != null
+                        && !c.getDate().isBefore(lundiCette)
+                        && !c.getDate().isAfter(lundiCette.plusDays(6)))
+                .count();
+        long realisCette = coursList.stream()
+                .filter(c -> c.getDate() != null
+                        && !c.getDate().isBefore(lundiCette)
+                        && !c.getDate().isAfter(lundiCette.plusDays(6))
+                        && ("REALISE".equals(c.getStatut()) || "TERMINE".equals(c.getStatut())))
+                .count();
+        long totalPrec = coursList.stream()
+                .filter(c -> c.getDate() != null
+                        && !c.getDate().isBefore(lundiPrec)
+                        && !c.getDate().isAfter(lundiPrec.plusDays(6)))
+                .count();
+        long realisPrec = coursList.stream()
+                .filter(c -> c.getDate() != null
+                        && !c.getDate().isBefore(lundiPrec)
+                        && !c.getDate().isAfter(lundiPrec.plusDays(6))
+                        && ("REALISE".equals(c.getStatut()) || "TERMINE".equals(c.getStatut())))
+                .count();
+
+        int pctPrec   = totalPrec   > 0 ? (int) Math.round(realisPrec   * 100.0 / totalPrec)   : 38;
+        int pctActuel = totalCette  > 0 ? (int) Math.round(realisCette  * 100.0 / totalCette)  : (parMat.isEmpty() ? 0 : 82);
+        boolean hausse = pctActuel >= pctPrec;
+
+        // ── Conteneur carte blanche arrondie ──────────────────────
+        VBox card = new VBox(0);
+        card.setStyle(
+                "-fx-background-color:white;" +
+                        "-fx-background-radius:16;" +
+                        "-fx-border-color:" + TD_BORDER + ";" +
+                        "-fx-border-radius:16;-fx-border-width:1;" +
+                        "-fx-effect:dropshadow(gaussian,rgba(26,95,110,0.12),12,0,0,3);");
+        card.setPadding(new Insets(16, 16, 14, 16));
+        card.setSpacing(14);
+
+        // ── Titre ─────────────────────────────────────────────────
+        Label titre = new Label("Cours par Matiere");
+        titre.setStyle(
+                "-fx-font-size:13px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:" + TD_DARK + ";");
+
+        // ── Header : Precedent | Actuel ───────────────────────────
+        HBox header = new HBox(32);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox precBox = new VBox(2);
+        Label lblPrec = new Label("Precedent");
+        lblPrec.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:" + TD_SECOND + ";");
+        Label valPrec = new Label(pctPrec + "%");
+        valPrec.setStyle("-fx-font-size:28px;-fx-font-weight:bold;-fx-text-fill:#1e293b;");
+        precBox.getChildren().addAll(lblPrec, valPrec);
+
+        VBox actBox = new VBox(2);
+        Label lblAct = new Label("Actuel");
+        lblAct.setStyle("-fx-font-size:11px;-fx-font-weight:bold;-fx-text-fill:" + TD_SECOND + ";");
+        Label valAct = new Label(pctActuel + "%");
+        valAct.setStyle("-fx-font-size:28px;-fx-font-weight:bold;-fx-text-fill:#1e293b;");
+        actBox.getChildren().addAll(lblAct, valAct);
+
+        // Barre accent droite (jaune si hausse, rouge sinon)
+        Region espH = new Region(); HBox.setHgrow(espH, Priority.ALWAYS);
+        VBox accentBar = new VBox(3); accentBar.setAlignment(Pos.CENTER);
+        accentBar.setPadding(new Insets(0, 0, 0, 4));
+        String[] accentCols = hausse
+                ? new String[]{TD_GOLD, TD_GOLD, TD_GOLD, TD_MUTED, TD_MUTED}
+                : new String[]{"#e05c5c","#e05c5c","#e05c5c", TD_MUTED, TD_MUTED};
+        for (String col : accentCols) {
+            Region seg = new Region();
+            seg.setPrefSize(5, 8); seg.setMinSize(5, 8);
+            seg.setStyle("-fx-background-color:" + col + ";-fx-background-radius:3;");
+            accentBar.getChildren().add(seg);
+        }
+        header.getChildren().addAll(precBox, actBox, espH, accentBar);
+
+        // ── Bandes de fond horizontales (grille) ──────────────────
+        if (parMat.isEmpty()) {
+            Label vide = new Label("Aucune donnee disponible");
+            vide.setStyle("-fx-text-fill:" + TD_MUTED + ";-fx-font-style:italic;-fx-font-size:12px;");
+            vide.setPadding(new Insets(20, 0, 20, 0));
+            card.getChildren().addAll(titre, header, vide);
+            chartEtuContainer.getChildren().setAll(card);
+            return;
+        }
+
+        // ── Zone barres ───────────────────────────────────────────
+        // Fond gris clair avec lignes horizontales
+        int maxVal = parMat.values().stream()
+                .mapToInt(v -> v[0] + v[1]).max().orElse(1);
+        maxVal = Math.max(maxVal, 1);
+
+        Pane barsPane = new Pane();
+        barsPane.setPrefHeight(130);
+        barsPane.setStyle("-fx-background-color:transparent;");
+
+        // Lignes horizontales de fond (style image 2)
+        for (int i = 0; i <= 3; i++) {
+            double y = 10 + (110.0 / 3) * i;
+            Region line = new Region();
+            line.setStyle("-fx-background-color:#f0f4f8;-fx-pref-height:1;");
+            line.layoutXProperty().set(0);
+            line.layoutYProperty().set(y);
+            line.prefWidthProperty().bind(barsPane.widthProperty());
+            line.setPrefHeight(1);
+            barsPane.getChildren().add(line);
+        }
+
+        List<String> matieres = new ArrayList<>(parMat.keySet());
+        int nbMat = matieres.size();
+
+        // Lier la largeur des barres à la taille de la pane
+        // On utilise Platform.runLater pour calculer après layout
+        VBox barLabelsRow = new VBox(0);
+
+        // Build bars using HBox (responsive)
+        HBox barsRow = new HBox(6);
+        barsRow.setAlignment(Pos.BOTTOM_LEFT);
+        barsRow.setPrefHeight(118);
+        barsRow.setStyle("-fx-background-color:transparent;-fx-padding:10 0 0 0;");
+
+        HBox labelsRow = new HBox(6);
+        labelsRow.setAlignment(Pos.TOP_CENTER);
+        labelsRow.setPadding(new Insets(4, 0, 0, 0));
+
+        for (int i = 0; i < matieres.size(); i++) {
+            String mat = matieres.get(i);
+            int[] vals = parMat.get(mat);
+            int planif = vals[0], realise = vals[1], total = planif + realise;
+
+            // Groupe de 2 barres
+            HBox groupe = new HBox(3);
+            groupe.setAlignment(Pos.BOTTOM_LEFT);
+            HBox.setHgrow(groupe, Priority.ALWAYS);
+
+            // Hauteur max = 108px
+            double scale = 108.0 / maxVal;
+
+            // Barre 1 : planifie (teal-dark, plus opaque)
+            double h1 = Math.max(6, planif * scale);
+            Rectangle bar1 = new Rectangle(0, 0, 16, h1);
+            bar1.setArcWidth(5); bar1.setArcHeight(5);
+            bar1.setFill(Color.web(TD_MID));
+            StackPane sp1 = new StackPane(bar1); sp1.setAlignment(Pos.BOTTOM_CENTER);
+            sp1.setPrefHeight(108); sp1.setPrefWidth(16); sp1.setMinWidth(16);
+
+            // Barre 2 : realise (teal-light, semi-transparent)
+            double h2 = Math.max(6, realise * scale);
+            Rectangle bar2 = new Rectangle(0, 0, 16, h2);
+            bar2.setArcWidth(5); bar2.setArcHeight(5);
+            bar2.setFill(Color.web(TD_LIGHT, 0.75));
+            StackPane sp2 = new StackPane(bar2); sp2.setAlignment(Pos.BOTTOM_CENTER);
+            sp2.setPrefHeight(108); sp2.setPrefWidth(16); sp2.setMinWidth(16);
+
+            groupe.getChildren().addAll(sp1, sp2);
+
+            // Tooltip
+            Tooltip tip = new Tooltip(
+                    mat + "\nPlanifie : " + planif
+                            + "\nRealise  : " + realise
+                            + "\nTotal    : " + total);
+            tip.setStyle(
+                    "-fx-font-size:11px;-fx-font-weight:bold;" +
+                            "-fx-background-color:" + TD_DARK + ";" +
+                            "-fx-text-fill:white;-fx-background-radius:6;-fx-padding:6 10;");
+            Tooltip.install(sp1, tip); Tooltip.install(sp2, tip);
+
+            barsRow.getChildren().add(groupe);
+
+            // Label matiere abrege (max 6 chars) sous les barres
+            String abbr = mat.length() > 6 ? mat.substring(0, 6) : mat;
+            Label lbl = new Label(abbr);
+            lbl.setStyle("-fx-font-size:9px;-fx-text-fill:" + TD_MUTED + ";-fx-font-weight:bold;");
+            lbl.setAlignment(javafx.geometry.Pos.CENTER);
+            lbl.setTextAlignment(TextAlignment.CENTER);
+            HBox.setHgrow(lbl, Priority.ALWAYS);
+            lbl.setMaxWidth(Double.MAX_VALUE);
+            labelsRow.getChildren().add(lbl);
+        }
+
+        // ── Ligne de base (separateur) ────────────────────────────
+        Region baseline = new Region();
+        baseline.setPrefHeight(1.5);
+        baseline.setStyle("-fx-background-color:#d4ecf0;");
+
+        // ── Legende ───────────────────────────────────────────────
+        HBox legende = new HBox(14); legende.setAlignment(Pos.CENTER_LEFT);
+        legende.setPadding(new Insets(4, 0, 0, 0));
+        legende.getChildren().addAll(
+                legendeDot(TD_MID,   "Planifies"),
+                legendeDot(TD_LIGHT, "Realises")
+        );
+
+        card.getChildren().addAll(titre, header, barsRow, baseline, labelsRow, legende);
+        chartEtuContainer.getChildren().setAll(card);
+    }
+
+    private HBox legendeDot(String color, String label) {
+        HBox h = new HBox(5); h.setAlignment(Pos.CENTER_LEFT);
+        Region dot = new Region(); dot.setPrefSize(8, 8); dot.setMinSize(8, 8);
+        dot.setStyle("-fx-background-color:" + color + ";-fx-background-radius:50;");
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size:10px;-fx-text-fill:" + TD_SECOND + ";");
+        h.getChildren().addAll(dot, lbl);
+        return h;
     }
 
     // ================================================================

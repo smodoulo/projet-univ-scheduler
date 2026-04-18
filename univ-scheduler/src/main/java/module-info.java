@@ -7,6 +7,7 @@ module com.univscheduler {
     requires org.apache.pdfbox;
     requires org.apache.poi.ooxml;
     requires org.apache.poi.poi;
+    requires org.kordamp.ikonli.javafx;
 
     opens com.univscheduler to javafx.fxml;
     opens com.univscheduler.controller to javafx.fxml;

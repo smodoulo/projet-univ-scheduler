@@ -2,63 +2,68 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.LoginController"
             prefWidth="1100" prefHeight="680"
             styleClass="root-bg">
 
-    <!-- ══ CONTENU CENTRÉ (carte + panneau droit) ══ -->
-    <HBox AnchorPane.topAnchor="0"
-          AnchorPane.bottomAnchor="0"
-          AnchorPane.leftAnchor="0"
-          AnchorPane.rightAnchor="0"
-          alignment="CENTER"
-          pickOnBounds="false">
+    <HBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
+          alignment="CENTER" pickOnBounds="false">
 
         <!-- CARTE CENTRALE -->
-        <VBox styleClass="login-card"
-              alignment="CENTER" spacing="14"
-              maxWidth="480"
-              VBox.vgrow="ALWAYS">
+        <VBox styleClass="login-card" alignment="CENTER" spacing="14"
+              maxWidth="480" VBox.vgrow="ALWAYS">
 
-            <!-- Logo -->
             <StackPane>
                 <Circle styleClass="logo-circle" radius="68"/>
-                <Label text="🎓" style="-fx-font-size:76px; -fx-text-fill:white;"/>
+                <FontIcon iconLiteral="fas-graduation-cap" iconSize="64" iconColor="white"/>
             </StackPane>
 
-            <!-- Titre -->
             <VBox alignment="CENTER" spacing="6">
                 <Label text="UNIV-SCHEDULER" styleClass="brand-title"/>
                 <Label text="Gestion Intelligente des Salles" styleClass="brand-subtitle"/>
                 <Label text="et Emplois du Temps" styleClass="brand-subtitle"/>
             </VBox>
 
-            <!-- Trait -->
             <HBox alignment="CENTER">
                 <Region styleClass="brand-line"/>
             </HBox>
 
-            <!-- Slogan -->
-            <Label text="Réservez · Planifiez · Optimisez" styleClass="brand-slogan"/>
+            <Label text="Reservez · Planifiez · Optimisez" styleClass="brand-slogan"/>
 
-            <!-- Boutons rôles -->
+            <!-- Boutons role avec icones teal comme dans la capture -->
             <VBox alignment="CENTER" spacing="12" style="-fx-padding: 8 0 20 0;">
                 <HBox spacing="14" alignment="CENTER">
-                    <Button text="👑  Admin"        styleClass="btn-quick" onAction="#handleQuickAdmin"/>
-                    <Button text="📋  Gestionnaire" styleClass="btn-quick" onAction="#handleQuickGestionnaire"/>
+                    <!-- Admin - icone couronne teal-light #4ecdc4 -->
+                    <Button styleClass="btn-quick" onAction="#handleQuickAdmin">
+                        <graphic><FontIcon iconLiteral="fas-crown" iconSize="14" iconColor="#4ecdc4"/></graphic>
+                        <text>Admin</text>
+                    </Button>
+                    <!-- Gestionnaire - icone clipboard teal-light -->
+                    <Button styleClass="btn-quick" onAction="#handleQuickGestionnaire">
+                        <graphic><FontIcon iconLiteral="fas-clipboard-list" iconSize="14" iconColor="#4ecdc4"/></graphic>
+                        <text>Gestionnaire</text>
+                    </Button>
                 </HBox>
                 <HBox spacing="14" alignment="CENTER">
-                    <Button text="👨‍🏫  Enseignant"   styleClass="btn-quick" onAction="#handleQuickEnseignant"/>
-                    <Button text="🎓  Étudiant"     styleClass="btn-quick" onAction="#handleQuickEtudiant"/>
+                    <!-- Enseignant - icone tableau teal-light -->
+                    <Button styleClass="btn-quick" onAction="#handleQuickEnseignant">
+                        <graphic><FontIcon iconLiteral="fas-chalkboard-teacher" iconSize="14" iconColor="#4ecdc4"/></graphic>
+                        <text>Enseignant</text>
+                    </Button>
+                    <!-- Etudiant - icone toque teal-light -->
+                    <Button styleClass="btn-quick" onAction="#handleQuickEtudiant">
+                        <graphic><FontIcon iconLiteral="fas-user-graduate" iconSize="14" iconColor="#4ecdc4"/></graphic>
+                        <text>Etudiant</text>
+                    </Button>
                 </HBox>
             </VBox>
-
         </VBox>
 
-        <!-- PANNEAU DROIT — caché par défaut -->
-        <VBox fx:id="rightPanel"
-              styleClass="login-right-panel"
+        <!-- PANNEAU DROIT : formulaire de connexion -->
+        <VBox fx:id="rightPanel" styleClass="login-right-panel"
               alignment="CENTER" spacing="0"
               HBox.hgrow="ALWAYS" prefWidth="660"
               visible="false" managed="false" opacity="0">
@@ -70,58 +75,48 @@
                 </HBox>
 
                 <VBox alignment="CENTER" spacing="8">
-                    <Label fx:id="roleTitle" text="Connexion" styleClass="login-form-title"/>
-                    <Label fx:id="roleSubtitle"
-                           text="Entrez vos identifiants"
-                           styleClass="login-form-subtitle"
-                           wrapText="true" textAlignment="CENTER"/>
+                    <Label fx:id="roleTitle"    text="Connexion"          styleClass="login-form-title"/>
+                    <Label fx:id="roleSubtitle" text="Entrez vos identifiants"
+                           styleClass="login-form-subtitle" wrapText="true" textAlignment="CENTER"/>
                 </VBox>
 
                 <VBox spacing="18" maxWidth="400">
                     <VBox spacing="7">
                         <Label text="Adresse e-mail" styleClass="login-field-label"/>
-                        <TextField fx:id="emailField"
-                                   promptText="nom@univ-thies.sn"
-                                   styleClass="login-input"/>
+                        <TextField fx:id="emailField" promptText="nom@univ-thies.sn" styleClass="login-input"/>
                     </VBox>
                     <VBox spacing="7">
                         <Label text="Mot de passe" styleClass="login-field-label"/>
-                        <PasswordField fx:id="passwordField"
-                                       promptText="••••••••"
-                                       styleClass="login-input"/>
+                        <PasswordField fx:id="passwordField" promptText="••••••••" styleClass="login-input"/>
                     </VBox>
-
                     <Label fx:id="errorLabel" styleClass="error-label" text="" wrapText="true"/>
-
-                    <Button fx:id="loginBtn"
-                            text="Se connecter"
-                            styleClass="btn-login"
-                            maxWidth="Infinity"/>
+                    <Button fx:id="loginBtn" text="Se connecter" styleClass="btn-login" maxWidth="Infinity"/>
                 </VBox>
 
                 <HBox alignment="CENTER" spacing="6">
-                    <Label text="🔒" style="-fx-font-size:11px; -fx-text-fill:#94a3b8;"/>
-                    <Label text="Connexion sécurisée — Données protégées" styleClass="login-footer"/>
+                    <FontIcon iconLiteral="fas-lock" iconSize="11" iconColor="#94a3b8"/>
+                    <Label text="Connexion securisee — Donnees protegees" styleClass="login-footer"/>
                 </HBox>
 
             </VBox>
         </VBox>
-
     </HBox>
 
-    <!-- ══ BARRE TITRE — déclarée EN DERNIER = z-order au-dessus de tout ══ -->
-    <HBox AnchorPane.topAnchor="0"
-          AnchorPane.leftAnchor="0"
-          AnchorPane.rightAnchor="0"
-          styleClass="win-bar"
-          alignment="CENTER_RIGHT"
-          onMousePressed="#handleBarPressed"
-          onMouseDragged="#handleBarDragged"
+    <!-- BARRE TITRE WINDOWS -->
+    <HBox AnchorPane.topAnchor="0" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
+          styleClass="win-bar" alignment="CENTER_RIGHT"
+          onMousePressed="#handleBarPressed" onMouseDragged="#handleBarDragged"
           pickOnBounds="false">
         <HBox spacing="6" alignment="CENTER_RIGHT" style="-fx-padding: 0 8 0 0;">
-            <Button text="−" styleClass="btn-win-txt" onAction="#handleMinimize"/>
-            <Button text="□" styleClass="btn-win-txt" onAction="#handleMaximize"/>
-            <Button text="✕" styleClass="btn-win-txt-close" onAction="#handleClose"/>
+            <Button styleClass="btn-win-txt" onAction="#handleMinimize">
+                <graphic><FontIcon iconLiteral="fas-minus" iconSize="10" iconColor="#a8d8e2"/></graphic>
+            </Button>
+            <Button styleClass="btn-win-txt" onAction="#handleMaximize">
+                <graphic><FontIcon iconLiteral="far-square" iconSize="10" iconColor="#a8d8e2"/></graphic>
+            </Button>
+            <Button styleClass="btn-win-txt-close" onAction="#handleClose">
+                <graphic><FontIcon iconLiteral="fas-times" iconSize="10" iconColor="#a8d8e2"/></graphic>
+            </Button>
         </HBox>
     </HBox>
 

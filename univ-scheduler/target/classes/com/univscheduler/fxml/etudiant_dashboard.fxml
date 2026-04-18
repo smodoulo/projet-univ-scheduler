@@ -2,55 +2,54 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.EtudiantDashboardController"
             styleClass="root-pane">
-
     <fx:define>
         <ToggleGroup fx:id="modeGroup"/>
     </fx:define>
-
     <top>
         <HBox styleClass="navbar" alignment="CENTER_LEFT" spacing="16">
+            <FontIcon iconLiteral="fas-graduation-cap" iconSize="22" iconColor="#a8d8e2"/>
             <Label text="UNIV-SCHEDULER" styleClass="nav-logo"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="Etudiant" styleClass="nav-role-badge-teal"/>
-
-            <!-- ✅ CORRIGE : notifBadge est maintenant un BUTTON cliquable -->
-            <Button fx:id="notifBadgeBtn"
-                    text="Aucune nouvelle"
-                    onAction="#handleOpenNotifications"
+            <Button fx:id="notifBadgeBtn" onAction="#handleOpenNotifications"
                     style="-fx-background-color:transparent;-fx-text-fill:#a8d8e2;
                            -fx-font-weight:bold;-fx-cursor:hand;-fx-padding:4 12;
                            -fx-background-radius:20;-fx-border-color:rgba(255,255,255,0.25);
-                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;"/>
-
+                           -fx-border-width:1;-fx-border-radius:20;-fx-font-size:12px;">
+                <graphic><FontIcon iconLiteral="fas-bell" iconSize="13" iconColor="#a8d8e2"/></graphic>
+                <text>Aucune nouvelle</text>
+            </Button>
             <Label fx:id="welcomeLabel" text="Bienvenue" styleClass="nav-user"/>
-            <Button text="Assistant"
-                    onAction="#openChatbot"
-                    style="-fx-background-color:#6366f1;-fx-text-fill:white;
-                           -fx-font-weight:bold;-fx-padding:6 14;
-                           -fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;"/>
-            <Button text="Deconnexion" styleClass="btn-logout" onAction="#handleLogout"/>
+            <Button onAction="#openChatbot"
+                    style="-fx-background-color:#6366f1;-fx-text-fill:white;-fx-font-weight:bold;
+                           -fx-padding:6 14;-fx-background-radius:8;-fx-cursor:hand;-fx-font-size:12px;">
+                <graphic><FontIcon iconLiteral="fas-robot" iconSize="13" iconColor="white"/></graphic>
+                <text>Assistant</text>
+            </Button>
+            <Button styleClass="btn-logout" onAction="#handleLogout">
+                <graphic><FontIcon iconLiteral="fas-sign-out-alt" iconSize="13" iconColor="white"/></graphic>
+                <text>Deconnexion</text>
+            </Button>
         </HBox>
     </top>
-
     <center>
         <ScrollPane fitToWidth="true">
             <VBox spacing="16" style="-fx-padding:20;">
-
-                <!-- Stats KPI -->
                 <HBox spacing="12">
                     <VBox styleClass="stat-card stat-blue"   HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="Cours"     styleClass="stat-label"/>
+                        <Label text="Cours"    styleClass="stat-label"/>
                         <Label fx:id="statCoursLabel"   text="0"  styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-green"  HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="Matieres"  styleClass="stat-label"/>
+                        <Label text="Matieres" styleClass="stat-label"/>
                         <Label fx:id="statMatiereLabel" text="0"  styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-orange" HBox.hgrow="ALWAYS" alignment="CENTER">
-                        <Label text="Heures"    styleClass="stat-label"/>
+                        <Label text="Heures"   styleClass="stat-label"/>
                         <Label fx:id="statHeuresLabel"  text="0h" styleClass="stat-value-small"/>
                     </VBox>
                     <VBox styleClass="stat-card stat-purple" HBox.hgrow="ALWAYS" alignment="CENTER">
@@ -58,23 +57,23 @@
                         <Label fx:id="statNiveauLabel"  text="—"  styleClass="stat-value-small"/>
                     </VBox>
                 </HBox>
-
                 <TabPane>
-
-                    <!-- Tab 1 : Emploi du Temps -->
-                    <Tab text="Emploi du Temps" closable="false">
+                    <!-- Tab 1 : EDT -->
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-list-alt" iconSize="13" iconColor="#2a9cb0"/><Label text="Emploi du Temps"/></HBox></graphic>
                         <VBox spacing="12">
                             <HBox spacing="12" alignment="CENTER_LEFT">
                                 <Label text="Classe :" styleClass="form-label"/>
                                 <ComboBox fx:id="classeCombo" prefWidth="200"/>
-                                <Label fx:id="totalCoursLabel" text="Cours : 0"
-                                       style="-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#2563eb;"/>
+                                <Label fx:id="totalCoursLabel" text="Cours : 0" style="-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:#2563eb;"/>
                                 <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="Export PDF" styleClass="btn-secondary" onAction="#handleExportPDF"/>
+                                <Button styleClass="btn-secondary" onAction="#handleExportPDF">
+                                    <graphic><FontIcon iconLiteral="fas-file-pdf" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                    <text>Export PDF</text>
+                                </Button>
                             </HBox>
                             <HBox spacing="16">
-                                <TableView fx:id="coursTable" prefHeight="400"
-                                           styleClass="data-table" HBox.hgrow="ALWAYS">
+                                <TableView fx:id="coursTable" prefHeight="400" styleClass="data-table" HBox.hgrow="ALWAYS">
                                     <columns>
                                         <TableColumn fx:id="colMat"        text="Matiere"    prefWidth="155"/>
                                         <TableColumn fx:id="colEns"        text="Enseignant" prefWidth="140"/>
@@ -84,10 +83,7 @@
                                         <TableColumn fx:id="colSalle"      text="Salle"      prefWidth="75"/>
                                         <TableColumn fx:id="colDate"       text="Date"       prefWidth="100"/>
                                     </columns>
-                                    <placeholder>
-                                        <Label text="Selectionnez une classe pour voir les cours."
-                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                    </placeholder>
+                                    <placeholder><Label text="Selectionnez une classe pour voir les cours." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                                 </TableView>
                                 <VBox styleClass="form-panel" minWidth="240" maxWidth="240" spacing="8">
                                     <Label text="Cours par Matiere" styleClass="form-title"/>
@@ -96,39 +92,40 @@
                             </HBox>
                         </VBox>
                     </Tab>
-
                     <!-- Tab 2 : Calendrier -->
-                    <Tab text="Calendrier" closable="false">
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-calendar-alt" iconSize="13" iconColor="#2a9cb0"/><Label text="Calendrier"/></HBox></graphic>
                         <VBox spacing="10">
-                            <HBox alignment="CENTER_LEFT" spacing="12"
-                                  style="-fx-padding:8;-fx-background-color:white;-fx-background-radius:8;">
-                                <Button text="Precedent"    styleClass="btn-secondary" onAction="#handlePrevWeek"/>
-                                <Label fx:id="calendarWeekLabel" text="Semaine courante"
-                                       styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="Aujourd'hui"  styleClass="btn-secondary" onAction="#handleTodayWeek"/>
-                                <Button text="Suivant"      styleClass="btn-secondary" onAction="#handleNextWeek"/>
+                            <HBox alignment="CENTER_LEFT" spacing="12" style="-fx-padding:8;-fx-background-color:white;-fx-background-radius:8;">
+                                <Button styleClass="btn-secondary" onAction="#handlePrevWeek">
+                                    <graphic><FontIcon iconLiteral="fas-chevron-left" iconSize="11" iconColor="#1a5f6e"/></graphic>
+                                    <text>Precedent</text>
+                                </Button>
+                                <Label fx:id="calendarWeekLabel" text="Semaine courante" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+                                <Button styleClass="btn-secondary" onAction="#handleTodayWeek">
+                                    <graphic><FontIcon iconLiteral="fas-calendar-check" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                    <text>Aujourd'hui</text>
+                                </Button>
+                                <Button styleClass="btn-secondary" onAction="#handleNextWeek">
+                                    <text>Suivant</text>
+                                    <graphic><FontIcon iconLiteral="fas-chevron-right" iconSize="11" iconColor="#1a5f6e"/></graphic>
+                                </Button>
                             </HBox>
                             <ScrollPane fitToWidth="true" prefHeight="500">
-                                <GridPane fx:id="calendarGrid" hgap="0" vgap="0"
-                                          style="-fx-background-color:#e2e8f0;"/>
+                                <GridPane fx:id="calendarGrid" hgap="0" vgap="0" style="-fx-background-color:#e2e8f0;"/>
                             </ScrollPane>
                         </VBox>
                     </Tab>
-
                     <!-- Tab 3 : Chercher Salle -->
-                    <Tab text="Chercher Salle Libre" closable="false">
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-search" iconSize="13" iconColor="#2a9cb0"/><Label text="Chercher Salle Libre"/></HBox></graphic>
                         <HBox spacing="16">
                             <VBox styleClass="form-panel" spacing="14" minWidth="290" maxWidth="290">
                                 <Label text="Filtres de Recherche" styleClass="form-title"/>
-                                <VBox spacing="8" style="-fx-background-color:#f8fafc;-fx-padding:10;
-                                                          -fx-background-radius:8;-fx-border-color:#e2e8f0;
-                                                          -fx-border-width:1;-fx-border-radius:8;">
+                                <VBox spacing="8" style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
                                     <Label text="Periode" styleClass="form-label"/>
-                                    <RadioButton fx:id="radioMaintenantBtn" text="Maintenant (temps reel)"
-                                                 toggleGroup="$modeGroup" selected="true"
-                                                 style="-fx-font-weight:bold;-fx-text-fill:#16a34a;"/>
-                                    <RadioButton fx:id="radioDateHeureBtn"  text="Date et heure precises"
-                                                 toggleGroup="$modeGroup"/>
+                                    <RadioButton fx:id="radioMaintenantBtn" text="Maintenant (temps reel)" toggleGroup="$modeGroup" selected="true" style="-fx-font-weight:bold;-fx-text-fill:#16a34a;"/>
+                                    <RadioButton fx:id="radioDateHeureBtn"  text="Date et heure precises"  toggleGroup="$modeGroup"/>
                                     <HBox fx:id="dateHeureBox" spacing="6" alignment="CENTER_LEFT" disable="true">
                                         <DatePicker fx:id="datePicker"      prefWidth="150" promptText="Date"/>
                                         <ComboBox   fx:id="heureDebutCombo" prefWidth="75"  promptText="De"/>
@@ -143,48 +140,45 @@
                                     <Label text="Type de salle" styleClass="form-label"/>
                                     <ComboBox fx:id="typeFilter" prefWidth="200"/>
                                 </VBox>
-                                <VBox spacing="6" style="-fx-background-color:#f8fafc;-fx-padding:10;
-                                                          -fx-background-radius:8;-fx-border-color:#e2e8f0;
-                                                          -fx-border-width:1;-fx-border-radius:8;">
+                                <VBox spacing="6" style="-fx-background-color:#f8fafc;-fx-padding:10;-fx-background-radius:8;-fx-border-color:#e2e8f0;-fx-border-width:1;-fx-border-radius:8;">
                                     <Label text="Equipements requis" styleClass="form-label"/>
                                     <CheckBox fx:id="checkProjecteur" text="Videoprojecteur"/>
                                     <CheckBox fx:id="checkTableau"    text="Tableau interactif"/>
                                     <CheckBox fx:id="checkClim"       text="Climatisation"/>
                                     <CheckBox fx:id="checkOrdinateur" text="Ordinateurs"/>
                                 </VBox>
-                                <Button text="Rechercher" styleClass="btn-primary" maxWidth="Infinity"
-                                        onAction="#handleRechercherSalles"
-                                        style="-fx-font-size:13px;-fx-padding:10 0;"/>
-                                <Label fx:id="resultLabel" text="Lancez une recherche pour voir les resultats."
-                                       wrapText="true" style="-fx-text-fill:#64748b;-fx-font-size:12px;"/>
+                                <Button styleClass="btn-primary" maxWidth="Infinity" onAction="#handleRechercherSalles" style="-fx-font-size:13px;-fx-padding:10 0;">
+                                    <graphic><FontIcon iconLiteral="fas-search" iconSize="13" iconColor="white"/></graphic>
+                                    <text>Rechercher</text>
+                                </Button>
+                                <Label fx:id="resultLabel" text="Lancez une recherche pour voir les resultats." wrapText="true" style="-fx-text-fill:#64748b;-fx-font-size:12px;"/>
                             </VBox>
                             <VBox HBox.hgrow="ALWAYS" spacing="8">
                                 <Label text="Salles disponibles" styleClass="section-title"/>
                                 <TableView fx:id="salleLibreTable" prefHeight="500" styleClass="data-table">
                                     <columns>
-                                        <TableColumn fx:id="colSalleNum"    text="Salle"      prefWidth="80"/>
-                                        <TableColumn fx:id="colSalleType"   text="Type"       prefWidth="65"/>
-                                        <TableColumn fx:id="colSalleCap"    text="Capacite"   prefWidth="75"/>
-                                        <TableColumn fx:id="colSalleBat"    text="Batiment"   prefWidth="150"/>
+                                        <TableColumn fx:id="colSalleNum"    text="Salle"       prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleType"   text="Type"        prefWidth="65"/>
+                                        <TableColumn fx:id="colSalleCap"    text="Capacite"    prefWidth="75"/>
+                                        <TableColumn fx:id="colSalleBat"    text="Batiment"    prefWidth="150"/>
                                         <TableColumn fx:id="colSalleEquip"  text="Equipements" prefWidth="200"/>
-                                        <TableColumn fx:id="colSalleStatut" text="Statut"     prefWidth="80"/>
+                                        <TableColumn fx:id="colSalleStatut" text="Statut"      prefWidth="80"/>
                                     </columns>
-                                    <placeholder>
-                                        <Label text="Lancez une recherche pour voir les salles libres."
-                                               style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                    </placeholder>
+                                    <placeholder><Label text="Lancez une recherche pour voir les salles libres." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                                 </TableView>
                             </VBox>
                         </HBox>
                     </Tab>
-
                     <!-- Tab 4 : Notifications -->
-                    <Tab text="Notifications" closable="false">
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="fas-bell" iconSize="13" iconColor="#2a9cb0"/><Label text="Notifications"/></HBox></graphic>
                         <VBox spacing="12">
                             <HBox alignment="CENTER_LEFT" spacing="12">
                                 <Label text="Mes Notifications" styleClass="section-title" HBox.hgrow="ALWAYS"/>
-                                <Button text="Tout marquer comme lu" styleClass="btn-secondary"
-                                        onAction="#handleMarkAllRead"/>
+                                <Button styleClass="btn-secondary" onAction="#handleMarkAllRead">
+                                    <graphic><FontIcon iconLiteral="fas-check-double" iconSize="12" iconColor="#1a5f6e"/></graphic>
+                                    <text>Tout marquer comme lu</text>
+                                </Button>
                             </HBox>
                             <TableView fx:id="notifTable" prefHeight="420" styleClass="data-table">
                                 <columns>
@@ -192,33 +186,24 @@
                                     <TableColumn fx:id="colNotifType" text="Type"    prefWidth="100"/>
                                     <TableColumn fx:id="colNotifDate" text="Date"    prefWidth="120"/>
                                 </columns>
-                                <placeholder>
-                                    <Label text="Aucune notification."
-                                           style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/>
-                                </placeholder>
+                                <placeholder><Label text="Aucune notification." style="-fx-text-fill:#94a3b8;-fx-font-style:italic;"/></placeholder>
                             </TableView>
                         </VBox>
                     </Tab>
-
                     <!-- Tab 5 : Mon Profil -->
-                    <Tab text="Mon Profil" closable="false">
+                    <Tab closable="false">
+                        <graphic><HBox spacing="5" alignment="CENTER_LEFT"><FontIcon iconLiteral="far-user-circle" iconSize="13" iconColor="#2a9cb0"/><Label text="Mon Profil"/></HBox></graphic>
                         <ScrollPane fitToWidth="true">
                             <VBox spacing="20" style="-fx-padding:24;">
-                                <Label text="Mon Profil Etudiant"
-                                       style="-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
+                                <Label text="Mon Profil Etudiant" style="-fx-font-size:18px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
                                 <VBox styleClass="form-panel" spacing="16">
                                     <HBox spacing="20" alignment="CENTER_LEFT">
-                                        <VBox alignment="CENTER"
-                                              style="-fx-background-color:#0ea5e9;-fx-background-radius:50;
-                                                     -fx-min-width:80;-fx-min-height:80;
-                                                     -fx-max-width:80;-fx-max-height:80;">
-                                            <Label text="U" style="-fx-font-size:36px;-fx-font-weight:bold;-fx-text-fill:white;" VBox.vgrow="ALWAYS"/>
+                                        <VBox alignment="CENTER" style="-fx-background-color:#0ea5e9;-fx-background-radius:50;-fx-min-width:80;-fx-min-height:80;-fx-max-width:80;-fx-max-height:80;">
+                                            <FontIcon iconLiteral="fas-user-graduate" iconSize="36" iconColor="white" VBox.vgrow="ALWAYS"/>
                                         </VBox>
                                         <VBox spacing="4">
-                                            <Label fx:id="profilNom"   text="—"
-                                                   style="-fx-font-size:20px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
-                                            <Label fx:id="profilEmail" text="—"
-                                                   style="-fx-font-size:13px;-fx-text-fill:#64748b;"/>
+                                            <Label fx:id="profilNom"   text="—" style="-fx-font-size:20px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"/>
+                                            <Label fx:id="profilEmail" text="—" style="-fx-font-size:13px;-fx-text-fill:#64748b;"/>
                                         </VBox>
                                     </HBox>
                                     <Separator/>
@@ -227,27 +212,17 @@
                                             <ColumnConstraints minWidth="140"/>
                                             <ColumnConstraints hgrow="ALWAYS"/>
                                         </columnConstraints>
-                                        <Label text="Niveau"  styleClass="form-label"
-                                               GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilNiveau" text="—"
-                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#2563eb;"
-                                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-                                        <Label text="Classe"  styleClass="form-label"
-                                               GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilClasse" text="—"
-                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"
-                                               GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-                                        <Label text="INE"     styleClass="form-label"
-                                               GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                                        <Label fx:id="profilINE" text="—"
-                                               style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;"
-                                               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                        <Label text="Niveau" styleClass="form-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilNiveau" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#2563eb;" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                        <Label text="Classe" styleClass="form-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilClasse" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                        <Label text="INE"    styleClass="form-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                                        <Label fx:id="profilINE" text="—" style="-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:#1e293b;" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                                     </GridPane>
                                 </VBox>
                             </VBox>
                         </ScrollPane>
                     </Tab>
-
                 </TabPane>
             </VBox>
         </ScrollPane>

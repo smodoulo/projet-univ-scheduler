@@ -2,6 +2,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <AnchorPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.univscheduler.controller.ChatbotController"
             prefWidth="400" prefHeight="540"
@@ -10,22 +11,27 @@
     <VBox AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
           AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
 
-        <!-- Header drag -->
+        <!-- Header teal-dark -->
         <HBox styleClass="chatbot-header" alignment="CENTER_LEFT" spacing="10"
               onMousePressed="#handleHeaderPressed"
               onMouseDragged="#handleHeaderDragged">
             <StackPane>
                 <Circle radius="18" styleClass="avatar-circle"/>
-                <Label text="🤖" style="-fx-font-size:18px;"/>
+                <!-- Icone robot blanc sur fond teal-dark -->
+                <FontIcon iconLiteral="fas-robot" iconSize="18" iconColor="white"/>
             </StackPane>
             <VBox spacing="1" HBox.hgrow="ALWAYS">
                 <Label text="Assistant UNIV-SCHEDULER" styleClass="chatbot-title"/>
                 <HBox spacing="4" alignment="CENTER_LEFT">
+                    <!-- Dot vert "En ligne" -->
                     <Circle radius="4" styleClass="status-dot"/>
                     <Label text="En ligne" styleClass="chatbot-status"/>
                 </HBox>
             </VBox>
-            <Button text="✕" styleClass="chatbot-close" onAction="#handleClose"/>
+            <!-- Bouton fermer -->
+            <Button styleClass="chatbot-close" onAction="#handleClose">
+                <graphic><FontIcon iconLiteral="fas-times" iconSize="12" iconColor="#a8d8e2"/></graphic>
+            </Button>
         </HBox>
 
         <!-- Zone messages -->
@@ -36,22 +42,34 @@
                   style="-fx-padding: 16 14;" fillWidth="true"/>
         </ScrollPane>
 
-        <!-- Suggestions -->
+        <!-- Suggestions rapides avec icones teal-light -->
         <HBox fx:id="suggestionsBox" styleClass="chatbot-suggestions"
               spacing="6" alignment="CENTER_LEFT">
-            <Button fx:id="btn1" text="📅 Planning"    styleClass="btn-suggest" onAction="#suggest1"/>
-            <Button fx:id="btn2" text="🏛 Salles"      styleClass="btn-suggest" onAction="#suggest2"/>
-            <Button fx:id="btn3" text="🔔 Notifs"      styleClass="btn-suggest" onAction="#suggest3"/>
+            <Button fx:id="btn1" styleClass="btn-suggest" onAction="#suggest1">
+                <graphic><FontIcon iconLiteral="fas-calendar-alt" iconSize="13" iconColor="#2a9cb0"/></graphic>
+                <text>Planning</text>
+            </Button>
+            <Button fx:id="btn2" styleClass="btn-suggest" onAction="#suggest2">
+                <graphic><FontIcon iconLiteral="fas-university" iconSize="13" iconColor="#2a9cb0"/></graphic>
+                <text>Salles</text>
+            </Button>
+            <Button fx:id="btn3" styleClass="btn-suggest" onAction="#suggest3">
+                <graphic><FontIcon iconLiteral="fas-bell" iconSize="13" iconColor="#2a9cb0"/></graphic>
+                <text>Notifs</text>
+            </Button>
         </HBox>
 
         <!-- Barre saisie -->
         <HBox styleClass="chatbot-input-bar" spacing="8" alignment="CENTER">
             <TextField fx:id="inputField"
-                       promptText="Écrivez votre message..."
+                       promptText="Ecrivez votre message..."
                        styleClass="chatbot-input"
                        HBox.hgrow="ALWAYS"
                        onAction="#handleSend"/>
-            <Button text="➤" styleClass="chatbot-send" onAction="#handleSend"/>
+            <!-- Bouton envoi : icone avion blanc sur fond teal-mid -->
+            <Button styleClass="chatbot-send" onAction="#handleSend">
+                <graphic><FontIcon iconLiteral="fas-paper-plane" iconSize="14" iconColor="white"/></graphic>
+            </Button>
         </HBox>
 
     </VBox>

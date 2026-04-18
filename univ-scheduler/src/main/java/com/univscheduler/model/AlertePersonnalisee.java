@@ -17,10 +17,13 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 import java.util.List;
 
 /**
- * Alertes personnalisées UNIV-SCHEDULER — palette teal
+ * Alertes personnalisées UNIV-SCHEDULER
+ * Icônes : FontIcon (Ikonli / Font Awesome Solid/Regular)
+ * Couleurs : palette teal UNIV-SCHEDULER
  */
 public class AlertePersonnalisee {
 
@@ -46,17 +49,49 @@ public class AlertePersonnalisee {
     private static final String TEXT_MUTED   = "#9eb3bf";
     private static final String TEXT_SECOND  = "#6b8394";
 
+    // ── Couleurs icônes navbar (référence FXML étudiant) ──────────
+    private static final String ICON_NAV    = "#a8d8e2";  // fas-bell, fas-graduation-cap navbar
+    private static final String ICON_TAB    = "#2a9cb0";  // fas-list-alt, fas-calendar-alt tabs
+    private static final String ICON_WHITE  = "white";    // icônes sur fonds colorés
+
+    // ════════════════════════════════════════════════════════════════
+    //  Helpers FontIcon — remplacent les émojis partout
+    // ════════════════════════════════════════════════════════════════
+
+    /** Crée un FontIcon Ikonli avec taille et couleur. */
+    private static FontIcon fi(String literal, int size, String hexColor) {
+        FontIcon icon = new FontIcon(literal);
+        icon.setIconSize(size);
+        icon.setIconColor(Color.web(hexColor));
+        return icon;
+    }
+
+    /** FontIcon dans un StackPane centré (pour les cercles d'icône). */
+    private static StackPane iconInCircle(String literal, int iconSize, String iconColor,
+                                          double radius, String fillHex, String strokeHex) {
+        Circle bg = new Circle(radius);
+        bg.setFill(Color.web(fillHex));
+        if (strokeHex != null) {
+            bg.setStroke(Color.web(strokeHex));
+            bg.setStrokeWidth(2.5);
+        }
+        FontIcon icon = fi(literal, iconSize, iconColor);
+        StackPane sp = new StackPane(bg, icon);
+        sp.setAlignment(Pos.CENTER);
+        return sp;
+    }
+
     // ════════════════════════════════════════════════════════════════
     public enum Type {
-        SUCCES  (TEAL_DARK, TEAL_BG,  TEAL_DARK, "✅", "Succès"),
-        ERREUR  (RED_SOFT,  RED_BG,   RED_TXT,   "❌", "Erreur"),
-        INFO    (TEAL_DARK, TEAL_BG,  TEAL_DARK, "ℹ",  "Information"),
-        WARN    (GOLD,      GOLD_BG,  GOLD_TXT,  "⚠",  "Avertissement"),
-        QUESTION(TEAL_DARK, TEAL_BG,  TEAL_DARK, "❓", "Confirmation");
+        SUCCES  (TEAL_DARK, TEAL_BG,  TEAL_DARK, "fas-check-circle",   "Succès"),
+        ERREUR  (RED_SOFT,  RED_BG,   RED_TXT,   "fas-times-circle",   "Erreur"),
+        INFO    (TEAL_MID,  TEAL_BG,  TEAL_DARK, "fas-info-circle",    "Information"),
+        WARN    (GOLD,      GOLD_BG,  GOLD_TXT,  "fas-exclamation-triangle", "Avertissement"),
+        QUESTION(TEAL_DARK, TEAL_BG,  TEAL_DARK, "fas-question-circle","Confirmation");
 
-        final String pri, fond, txt, icone, defTitre;
+        final String pri, fond, txt, iconLiteral, defTitre;
         Type(String p, String f, String t, String i, String d) {
-            pri=p; fond=f; txt=t; icone=i; defTitre=d;
+            pri=p; fond=f; txt=t; iconLiteral=i; defTitre=d;
         }
     }
 
@@ -86,13 +121,8 @@ public class AlertePersonnalisee {
     }
 
     // ════════════════════════════════════════════════════════════════
-    //  ✅ CHATBOT INTEGRE
+    //  CHATBOT INTÉGRÉ
     // ════════════════════════════════════════════════════════════════
-
-    /**
-     * Ouvre la fenêtre chatbot flottante.
-     * Usage : AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet());
-     */
     public static void ouvrirChatbot(String nomUtilisateur) {
         Stage fenetre = new Stage();
         fenetre.initStyle(StageStyle.TRANSPARENT);
@@ -108,27 +138,20 @@ public class AlertePersonnalisee {
                         "-fx-border-width:1;-fx-border-radius:20;-fx-background-radius:20;" +
                         "-fx-effect:dropshadow(gaussian,rgba(26,95,110,0.22),32,0,0,8);");
 
-        // ── En-tête teal-dark ─────────────────────────────────────
+        // ── En-tête ───────────────────────────────────────────────
         HBox header = new HBox(10);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(14, 16, 14, 16));
         header.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:20 20 0 0;-fx-cursor:move;");
 
-        StackPane avatarPane = new StackPane();
-        Circle avatarBg = new Circle(18);
-        avatarBg.setFill(Color.web(TEAL_LIGHT, 0.20));
-        avatarBg.setStroke(Color.web(TEAL_LIGHT));
-        avatarBg.setStrokeWidth(1.5);
-        Label avatarLbl = new Label("🤖"); avatarLbl.setStyle("-fx-font-size:15px;");
-        avatarPane.getChildren().addAll(avatarBg, avatarLbl);
+        // Avatar robot (FontIcon fas-robot dans cercle teal-light)
+        StackPane avatarPane = iconInCircle("fas-robot", 15, TEAL_LIGHT, 18, "rgba(78,205,196,0.2)", TEAL_LIGHT);
 
         VBox titleBox = new VBox(2);
         Label titleLbl = new Label("Assistant UNIV-SCHEDULER");
         titleLbl.setStyle("-fx-text-fill:#f0f9fa;-fx-font-size:13px;-fx-font-weight:bold;");
-        HBox statusRow = new HBox(5);
-        statusRow.setAlignment(Pos.CENTER_LEFT);
-        Circle statusDot = new Circle(4);
-        statusDot.setFill(Color.web(GREEN_SOFT));
+        HBox statusRow = new HBox(5); statusRow.setAlignment(Pos.CENTER_LEFT);
+        Circle statusDot = new Circle(4, Color.web(GREEN_SOFT));
         statusDot.setEffect(new DropShadow(4, Color.web(GREEN_SOFT, 0.6)));
         Label statusLbl = new Label("En ligne");
         statusLbl.setStyle("-fx-text-fill:" + TEAL_LIGHT + ";-fx-font-size:10px;");
@@ -137,14 +160,13 @@ public class AlertePersonnalisee {
 
         Region espH = new Region(); HBox.setHgrow(espH, Priority.ALWAYS);
 
-        Button btnClose = new Button("✕");
-        btnClose.setStyle(
-                "-fx-background-color:transparent;-fx-text-fill:" + TEXT_MUTED + ";" +
-                        "-fx-font-size:14px;-fx-cursor:hand;-fx-padding:4 8;-fx-background-radius:8;");
-        btnClose.setOnMouseEntered(e -> btnClose.setStyle(btnClose.getStyle()
-                .replace("transparent", RED_SOFT).replace(TEXT_MUTED, "white")));
-        btnClose.setOnMouseExited(e -> btnClose.setStyle(btnClose.getStyle()
-                .replace(RED_SOFT, "transparent").replace("white", TEXT_MUTED)));
+        // Bouton fermer (fas-times)
+        Button btnClose = new Button();
+        btnClose.setGraphic(fi("fas-times", 12, TEXT_MUTED));
+        String closeBase = "-fx-background-color:transparent;-fx-cursor:hand;-fx-padding:4 8;-fx-background-radius:8;";
+        btnClose.setStyle(closeBase);
+        btnClose.setOnMouseEntered(e -> { btnClose.setStyle(closeBase.replace("transparent", RED_SOFT)); btnClose.setGraphic(fi("fas-times", 12, ICON_WHITE)); });
+        btnClose.setOnMouseExited(e  -> { btnClose.setStyle(closeBase); btnClose.setGraphic(fi("fas-times", 12, TEXT_MUTED)); });
         btnClose.setOnAction(e -> {
             FadeTransition ft = new FadeTransition(Duration.millis(180), root);
             ft.setToValue(0); ft.setOnFinished(ev -> fenetre.close()); ft.play();
@@ -152,13 +174,9 @@ public class AlertePersonnalisee {
 
         header.getChildren().addAll(avatarPane, titleBox, espH, btnClose);
 
-        // Drag
         final double[] drag = {0, 0};
         header.setOnMousePressed(e  -> { drag[0] = e.getSceneX(); drag[1] = e.getSceneY(); });
-        header.setOnMouseDragged(e  -> {
-            fenetre.setX(e.getScreenX() - drag[0]);
-            fenetre.setY(e.getScreenY() - drag[1]);
-        });
+        header.setOnMouseDragged(e  -> { fenetre.setX(e.getScreenX() - drag[0]); fenetre.setY(e.getScreenY() - drag[1]); });
 
         // ── Zone messages ─────────────────────────────────────────
         VBox messagesBox = new VBox(10);
@@ -167,8 +185,7 @@ public class AlertePersonnalisee {
 
         ScrollPane scrollPane = new ScrollPane(messagesBox);
         scrollPane.setFitToWidth(true); scrollPane.setPrefHeight(280);
-        scrollPane.setStyle("-fx-background-color:" + TEAL_BG_SOFT +
-                ";-fx-border-width:0;-fx-background:" + TEAL_BG_SOFT + ";");
+        scrollPane.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-border-width:0;-fx-background:" + TEAL_BG_SOFT + ";");
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
@@ -178,13 +195,19 @@ public class AlertePersonnalisee {
         // ── Suggestions rapides ───────────────────────────────────
         HBox suggestions = new HBox(6);
         suggestions.setPadding(new Insets(8, 10, 8, 10));
-        suggestions.setStyle("-fx-background-color:" + TEAL_BG +
-                ";-fx-border-color:" + BORDER_LIGHT + ";-fx-border-width:1 0 0 0;");
-        for (String s : new String[]{"📋 Cours", "🏫 Salles", "📅 Planning", "⚠ Conflits"}) {
-            Button btn = creerBtnSuggest(s);
+        suggestions.setStyle("-fx-background-color:" + TEAL_BG + ";-fx-border-color:" + BORDER_LIGHT + ";-fx-border-width:1 0 0 0;");
+        String[][] chips = {
+                {"fas-book",      "Cours"},
+                {"fas-door-open", "Salles"},
+                {"fas-calendar",  "Planning"},
+                {"fas-exclamation-triangle", "Conflits"}
+        };
+        for (String[] chip : chips) {
+            Button btn = creerBtnSuggestIcon(chip[0], chip[1]);
+            final String texte = chip[1];
             btn.setOnAction(e -> {
-                ajouterMsgUser(messagesBox, scrollPane, s);
-                Platform.runLater(() -> repondreBot(messagesBox, scrollPane, s, nomUtilisateur));
+                ajouterMsgUser(messagesBox, scrollPane, texte);
+                Platform.runLater(() -> repondreBot(messagesBox, scrollPane, texte, nomUtilisateur));
             });
             suggestions.getChildren().add(btn);
         }
@@ -193,26 +216,20 @@ public class AlertePersonnalisee {
         HBox inputBar = new HBox(8);
         inputBar.setPadding(new Insets(10, 12, 10, 12));
         inputBar.setAlignment(Pos.CENTER);
-        inputBar.setStyle("-fx-background-color:white;-fx-border-color:" + BORDER_LIGHT +
-                ";-fx-border-width:1 0 0 0;-fx-background-radius:0 0 20 20;");
+        inputBar.setStyle("-fx-background-color:white;-fx-border-color:" + BORDER_LIGHT + ";-fx-border-width:1 0 0 0;-fx-background-radius:0 0 20 20;");
 
         TextField inputField = new TextField();
         inputField.setPromptText("Posez votre question...");
-        inputField.setStyle(
-                "-fx-background-color:" + TEAL_BG_SOFT +
-                        ";-fx-border-color:transparent;-fx-border-width:0;" +
-                        "-fx-border-radius:20;-fx-background-radius:20;-fx-padding:10 16;" +
-                        "-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";");
+        inputField.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-border-color:transparent;-fx-border-width:0;-fx-border-radius:20;-fx-background-radius:20;-fx-padding:10 16;-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";");
         HBox.setHgrow(inputField, Priority.ALWAYS);
 
-        Button btnSend = new Button("➤");
-        btnSend.setStyle(
-                "-fx-background-color:" + TEAL_MID +
-                        ";-fx-text-fill:white;-fx-font-size:14px;-fx-background-radius:50%;" +
-                        "-fx-min-width:38;-fx-min-height:38;-fx-max-width:38;-fx-max-height:38;" +
-                        "-fx-cursor:hand;-fx-padding:0;");
-        btnSend.setOnMouseEntered(e -> btnSend.setStyle(btnSend.getStyle().replace(TEAL_MID, TEAL_DARK)));
-        btnSend.setOnMouseExited(e  -> btnSend.setStyle(btnSend.getStyle().replace(TEAL_DARK, TEAL_MID)));
+        // Bouton envoyer (fas-paper-plane)
+        Button btnSend = new Button();
+        btnSend.setGraphic(fi("fas-paper-plane", 14, ICON_WHITE));
+        String sendBase = "-fx-background-color:" + TEAL_MID + ";-fx-background-radius:50%;-fx-min-width:38;-fx-min-height:38;-fx-max-width:38;-fx-max-height:38;-fx-cursor:hand;-fx-padding:0;";
+        btnSend.setStyle(sendBase);
+        btnSend.setOnMouseEntered(e -> btnSend.setStyle(sendBase.replace(TEAL_MID, TEAL_DARK)));
+        btnSend.setOnMouseExited(e  -> btnSend.setStyle(sendBase.replace(TEAL_DARK, TEAL_MID)));
 
         Runnable envoyer = () -> {
             String txt = inputField.getText().trim();
@@ -242,9 +259,7 @@ public class AlertePersonnalisee {
         HBox row = new HBox(); row.setAlignment(Pos.CENTER_RIGHT);
         Label msg = new Label(texte);
         msg.setWrapText(true); msg.setMaxWidth(260);
-        msg.setStyle(
-                "-fx-background-color:" + TEAL_MID +
-                        ";-fx-text-fill:white;-fx-padding:10 14;-fx-background-radius:18 4 18 18;-fx-font-size:13px;");
+        msg.setStyle("-fx-background-color:" + TEAL_MID + ";-fx-text-fill:white;-fx-padding:10 14;-fx-background-radius:18 4 18 18;-fx-font-size:13px;");
         row.getChildren().add(msg);
         box.getChildren().add(row);
         Platform.runLater(() -> scroll.setVvalue(1.0));
@@ -252,13 +267,11 @@ public class AlertePersonnalisee {
 
     private static void ajouterMsgBot(VBox box, ScrollPane scroll, String texte) {
         HBox row = new HBox(8); row.setAlignment(Pos.CENTER_LEFT);
-        Label avatar = new Label("🤖"); avatar.setStyle("-fx-font-size:16px;");
+        // Avatar bot : fas-robot
+        Label avatar = new Label(); avatar.setGraphic(fi("fas-robot", 16, TEAL_MID));
         Label msg = new Label(texte);
         msg.setWrapText(true); msg.setMaxWidth(270);
-        msg.setStyle(
-                "-fx-background-color:white;-fx-text-fill:" + TEAL_DARK +
-                        ";-fx-padding:10 14;-fx-background-radius:4 18 18 18;-fx-font-size:13px;" +
-                        "-fx-border-color:" + BORDER_LIGHT + ";-fx-border-width:1;-fx-border-radius:4 18 18 18;");
+        msg.setStyle("-fx-background-color:white;-fx-text-fill:" + TEAL_DARK + ";-fx-padding:10 14;-fx-background-radius:4 18 18 18;-fx-font-size:13px;-fx-border-color:" + BORDER_LIGHT + ";-fx-border-width:1;-fx-border-radius:4 18 18 18;");
         row.setOpacity(0);
         row.getChildren().addAll(avatar, msg);
         box.getChildren().add(row);
@@ -282,34 +295,25 @@ public class AlertePersonnalisee {
     }
 
     private static String genererReponse(String q, String nom) {
-        if (q.contains("cours") || q.contains("📋"))
-            return "📚 Gérez les cours dans l'onglet \"Emploi du Temps\".\nAjout, modification, suppression et export disponibles.";
-        if (q.contains("salle") || q.contains("🏫"))
-            return "🏫 La carte des salles est dans l'onglet \"Carte Salles\".\nTaux d'occupation en temps réel par bâtiment.";
-        if (q.contains("planning") || q.contains("calendrier") || q.contains("📅"))
-            return "📅 Le calendrier est dans l'onglet \"Vue Calendrier\".\nVue semaine ou mois disponible.";
-        if (q.contains("conflit") || q.contains("⚠"))
-            return "⚠ Les conflits sont détectés automatiquement lors de la création d'un cours.\nConflit salle ou enseignant signalé en rouge.";
-        if (q.contains("rapport") || q.contains("statistique"))
-            return "📈 Les rapports sont dans l'onglet \"Rapports\".\nHebdomadaire, mensuel, graphiques et export Excel.";
-        if (q.contains("réservation") || q.contains("reserv"))
-            return "📌 Les réservations se valident dans l'onglet \"Réservations\".\nAcceptation ou refus avec notification automatique.";
-        if (q.contains("bonjour") || q.contains("salut") || q.contains("hello"))
-            return "Bonjour " + nom + " ! Comment puis-je vous aider aujourd'hui ?";
-        if (q.contains("merci"))
-            return "Avec plaisir ! N'hésitez pas si vous avez d'autres questions.";
+        if (q.contains("cours"))       return "Gérez les cours dans l'onglet \"Emploi du Temps\".\nAjout, modification, suppression et export disponibles.";
+        if (q.contains("salle"))       return "La carte des salles est dans l'onglet \"Carte Salles\".\nTaux d'occupation en temps réel par bâtiment.";
+        if (q.contains("planning") || q.contains("calendrier")) return "Le calendrier est dans l'onglet \"Vue Calendrier\".\nVue semaine ou mois disponible.";
+        if (q.contains("conflit"))     return "Les conflits sont détectés automatiquement lors de la création d'un cours.\nConflit salle ou enseignant signalé en rouge.";
+        if (q.contains("rapport") || q.contains("statistique")) return "Les rapports sont dans l'onglet \"Rapports\".\nHebdomadaire, mensuel, graphiques et export Excel.";
+        if (q.contains("réservation") || q.contains("reserv")) return "Les réservations se valident dans l'onglet \"Réservations\".\nAcceptation ou refus avec notification automatique.";
+        if (q.contains("bonjour") || q.contains("salut") || q.contains("hello")) return "Bonjour " + nom + " ! Comment puis-je vous aider aujourd'hui ?";
+        if (q.contains("merci"))       return "Avec plaisir ! N'hésitez pas si vous avez d'autres questions.";
         return "Je n'ai pas bien compris votre question.\nEssayez : \"cours\", \"salles\", \"planning\", \"conflits\"...";
     }
 
-    private static Button creerBtnSuggest(String texte) {
+    /** Bouton suggestion chatbot avec FontIcon + texte */
+    private static Button creerBtnSuggestIcon(String iconLiteral, String texte) {
         Button b = new Button(texte);
-        String base =
-                "-fx-background-color:white;-fx-text-fill:" + TEAL_MID +
-                        ";-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:5 10;-fx-background-radius:20;" +
-                        "-fx-border-color:#a8e6df;-fx-border-width:1;-fx-border-radius:20;-fx-cursor:hand;";
+        b.setGraphic(fi(iconLiteral, 11, TEAL_MID));
+        String base = "-fx-background-color:white;-fx-text-fill:" + TEAL_MID + ";-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:5 10;-fx-background-radius:20;-fx-border-color:#a8e6df;-fx-border-width:1;-fx-border-radius:20;-fx-cursor:hand;";
         b.setStyle(base);
-        b.setOnMouseEntered(e -> b.setStyle(base.replace("white", TEAL_MID).replace(TEAL_MID + ";", "white;")));
-        b.setOnMouseExited(e  -> b.setStyle(base));
+        b.setOnMouseEntered(e -> { b.setStyle(base.replace("white", TEAL_MID).replace(TEAL_MID + ";", "white;")); b.setGraphic(fi(iconLiteral, 11, ICON_WHITE)); });
+        b.setOnMouseExited(e  -> { b.setStyle(base); b.setGraphic(fi(iconLiteral, 11, TEAL_MID)); });
         return b;
     }
 
@@ -318,7 +322,6 @@ public class AlertePersonnalisee {
     // ════════════════════════════════════════════════════════════════
     public static String demanderMotifAnnulation(
             String nomCours, String jour, String heureDebut, String heureFin) {
-
         final String[] motif = {null};
         Stage fenetre = new Stage();
         fenetre.initModality(Modality.APPLICATION_MODAL);
@@ -334,7 +337,7 @@ public class AlertePersonnalisee {
         carte.setEffect(ombreCarte());
         carte.setStyle("-fx-background-color:" + TEAL_BG + ";-fx-background-radius:14;");
 
-        HBox bandeTitre = bandeTitre("❌", "Annuler ce cours", fenetre);
+        HBox bandeTitre = bandeTitre("fas-times-circle", "Annuler ce cours", fenetre, RED_SOFT);
         Region ligne = ligneDeco(RED_SOFT);
 
         VBox corps = new VBox(14);
@@ -351,23 +354,25 @@ public class AlertePersonnalisee {
         TextArea champMotif = new TextArea();
         champMotif.setPromptText("Ex: Cours reporté, enseignant absent...");
         champMotif.setPrefRowCount(3); champMotif.setWrapText(true);
-        champMotif.setStyle("-fx-background-color:white;-fx-border-color:" + BORDER_LIGHT +
-                ";-fx-border-radius:8;-fx-background-radius:8;-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";");
-        Label lblErreur = new Label("⚠ Veuillez saisir un motif.");
-        lblErreur.setStyle("-fx-text-fill:" + RED_SOFT + ";-fx-font-size:11px;");
-        lblErreur.setVisible(false);
-        blocMotif.getChildren().addAll(lblMotif, champMotif, lblErreur);
+        champMotif.setStyle("-fx-background-color:white;-fx-border-color:" + BORDER_LIGHT + ";-fx-border-radius:8;-fx-background-radius:8;-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";");
+
+        HBox errRow = new HBox(5); errRow.setAlignment(Pos.CENTER_LEFT);
+        errRow.setVisible(false);
+        errRow.getChildren().addAll(fi("fas-exclamation-triangle", 11, RED_SOFT),
+                labelStyled("Veuillez saisir un motif.", "-fx-text-fill:" + RED_SOFT + ";-fx-font-size:11px;"));
+        blocMotif.getChildren().addAll(lblMotif, champMotif, errRow);
         corps.getChildren().add(blocMotif);
 
         HBox boutons = new HBox(12); boutons.setAlignment(Pos.CENTER_RIGHT);
         boutons.setPadding(new Insets(14, 24, 20, 24));
         boutons.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 14 14;");
-        Button btnAnnuler = creerBouton("Annuler", TEAL_BG, TEAL_DARK, BORDER_LIGHT);
+
+        Button btnAnnuler = creerBoutonIcon("fas-arrow-left", "Retour", TEAL_BG, TEAL_DARK, BORDER_LIGHT);
         btnAnnuler.setOnAction(e -> fenetre.close());
-        Button btnConfirmer = creerBouton("❌ Confirmer l'annulation", RED_SOFT, "white", "#c94040");
+        Button btnConfirmer = creerBoutonIcon("fas-times-circle", "Confirmer l'annulation", RED_SOFT, ICON_WHITE, "#c94040");
         btnConfirmer.setOnAction(e -> {
             String m = champMotif.getText().trim();
-            if (m.isEmpty()) { lblErreur.setVisible(true); return; }
+            if (m.isEmpty()) { errRow.setVisible(true); return; }
             motif[0] = m; fenetre.close();
         });
         boutons.getChildren().addAll(btnAnnuler, btnConfirmer);
@@ -401,7 +406,7 @@ public class AlertePersonnalisee {
         carte.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:14;");
 
         String titreBande = idSignal > 0 ? "Signalement #" + idSignal : (titre != null ? titre : "Détail");
-        HBox bandeTitre = bandeTitre("📋", titreBande, fenetre);
+        HBox bandeTitre = bandeTitre("fas-clipboard-list", titreBande, fenetre, TEAL_MID);
         Region ligne = ligneDeco(TEAL_MID);
 
         HBox enTete = new HBox(12); enTete.setAlignment(Pos.CENTER_LEFT);
@@ -414,8 +419,7 @@ public class AlertePersonnalisee {
             String statut = "";
             for (String[] l : lignes) if (l[0].contains("Statut")) { statut = l[1]; break; }
             Label badge = new Label(statut.isEmpty() ? "Info" : statut);
-            badge.setStyle("-fx-background-color:" + couleurStatut + ";-fx-text-fill:white;" +
-                    "-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;");
+            badge.setStyle("-fx-background-color:" + couleurStatut + ";-fx-text-fill:white;-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;");
             enTete.getChildren().addAll(lblTitreSignal, badge);
         } else {
             enTete.getChildren().add(lblTitreSignal);
@@ -446,23 +450,28 @@ public class AlertePersonnalisee {
 
         if (description != null && !description.isEmpty()) {
             VBox bloc = new VBox(6); bloc.setPadding(new Insets(14, 24, 10, 24));
-            Label tit = new Label("📝 Description"); tit.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEXT_SECOND + ";");
+            HBox titRow = new HBox(6, fi("fas-file-alt", 12, TEXT_SECOND),
+                    labelStyled("Description", "-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEXT_SECOND + ";"));
+            titRow.setAlignment(Pos.CENTER_LEFT);
             Label val = new Label(description); val.setWrapText(true); val.setMaxWidth(420);
             val.setStyle("-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";-fx-line-spacing:3;-fx-background-color:" + ROW_ALT + ";-fx-padding:10;-fx-background-radius:8;");
-            bloc.getChildren().addAll(tit, val); corps.getChildren().add(bloc);
+            bloc.getChildren().addAll(titRow, val); corps.getChildren().add(bloc);
         }
         if (reponseAdmin != null && !reponseAdmin.isEmpty()) {
             VBox bloc = new VBox(6); bloc.setPadding(new Insets(10, 24, 10, 24));
-            Label tit = new Label("💬 Réponse de l'administration"); tit.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEAL_MID + ";");
+            HBox titRow = new HBox(6, fi("fas-comment-dots", 12, TEAL_MID),
+                    labelStyled("Réponse de l'administration", "-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEAL_MID + ";"));
+            titRow.setAlignment(Pos.CENTER_LEFT);
             Label val = new Label(reponseAdmin); val.setWrapText(true); val.setMaxWidth(420);
             val.setStyle("-fx-font-size:13px;-fx-text-fill:" + TEAL_DARK + ";-fx-line-spacing:3;-fx-background-color:#c8edf2;-fx-padding:10;-fx-background-radius:8;");
-            bloc.getChildren().addAll(tit, val); corps.getChildren().add(bloc);
+            bloc.getChildren().addAll(titRow, val); corps.getChildren().add(bloc);
         }
         if (dateResolution != null && !dateResolution.isEmpty()) {
-            Label l = new Label("✅ Résolu le : " + dateResolution);
-            l.setPadding(new Insets(6, 24, 12, 24));
-            l.setStyle("-fx-font-size:12px;-fx-text-fill:" + GREEN_SOFT + ";-fx-font-weight:bold;");
-            corps.getChildren().add(l);
+            HBox row = new HBox(6, fi("fas-check-circle", 13, GREEN_SOFT),
+                    labelStyled("Résolu le : " + dateResolution, "-fx-font-size:12px;-fx-text-fill:" + GREEN_SOFT + ";-fx-font-weight:bold;"));
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPadding(new Insets(6, 24, 12, 24));
+            corps.getChildren().add(row);
         }
 
         ScrollPane scroll = new ScrollPane(corps);
@@ -492,74 +501,97 @@ public class AlertePersonnalisee {
         carte.setEffect(ombreCarte());
         carte.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:14;");
 
+        // ── Bande titre ───────────────────────────────────────────
         HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
         bande.setPadding(new Insets(15, 20, 15, 20));
         bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:14 14 0 0;");
-        Label lLogo=new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep=new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;");
-        Label lIco=new Label("🔔"); lIco.setStyle("-fx-font-size:16px;");
-        Label lTit=new Label("Mes Notifications"); lTit.setStyle("-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
-        Region esp=new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
-        long nbNL=notifs.stream().filter(n->!n.isLu()).count();
-        Label lComp=new Label(notifs.size()+" notif"+(notifs.size()>1?"s":"")+(nbNL>0?"  •  🆕 "+nbNL:""));
+
+        // fas-graduation-cap (couleur ICON_NAV comme dans le FXML étudiant)
+        bande.getChildren().add(fi("fas-graduation-cap", 16, ICON_NAV));
+        Label lSep = labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;");
+        // fas-bell (couleur ICON_NAV comme navbar étudiant)
+        bande.getChildren().addAll(lSep, fi("fas-bell", 15, ICON_NAV));
+        Label lTit = labelStyled("Mes Notifications", "-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        long nbNL = notifs.stream().filter(n -> !n.isLu()).count();
+        Label lComp = new Label(notifs.size() + " notif" + (notifs.size() > 1 ? "s" : "") + (nbNL > 0 ? "  •  " + nbNL + " new" : ""));
         lComp.setStyle("-fx-background-color:rgba(255,255,255,0.15);-fx-text-fill:rgba(255,255,255,0.9);-fx-font-size:11px;-fx-font-weight:bold;-fx-padding:3 10;-fx-background-radius:20;");
-        Label lApp=new Label("UNIV-SCHEDULER"); lApp.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.55);-fx-font-weight:bold;");
-        Button btnX=btnFermerX(); btnX.setOnAction(e->fenetre.close());
-        bande.getChildren().addAll(lLogo,lSep,lIco,lTit,esp,lComp,lApp,btnX);
+        Label lApp = labelStyled("UNIV-SCHEDULER", "-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.55);-fx-font-weight:bold;");
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        bande.getChildren().addAll(lTit, esp, lComp, lApp, btnX);
 
-        Region ligne=ligneDeco(TEAL_MID);
+        Region ligne = ligneDeco(TEAL_MID);
 
-        HBox sousEn=new HBox(12); sousEn.setAlignment(Pos.CENTER_LEFT);
-        sousEn.setPadding(new Insets(10,20,10,20));
-        sousEn.setStyle("-fx-background-color:"+TEAL_BG+";");
-        Label lRes=new Label("Toutes les notifications sont marquées comme lues.");
-        lRes.setStyle("-fx-font-size:11px;-fx-text-fill:"+TEXT_SECOND+";");
-        Region espS=new Region(); HBox.setHgrow(espS,Priority.ALWAYS);
-        HBox leg=new HBox(8); leg.setAlignment(Pos.CENTER_RIGHT);
-        leg.getChildren().addAll(creerPill("✅ Succès",GREEN_BG,GREEN_TXT),creerPill("⚠️ Alerte",RED_BG,RED_TXT),creerPill("🔔 Info",TEAL_BG,TEAL_DARK));
-        sousEn.getChildren().addAll(lRes,espS,leg);
+        // ── Sous-en-tête légende ───────────────────────────────────
+        HBox sousEn = new HBox(12); sousEn.setAlignment(Pos.CENTER_LEFT);
+        sousEn.setPadding(new Insets(10, 20, 10, 20));
+        sousEn.setStyle("-fx-background-color:" + TEAL_BG + ";");
+        Label lRes = labelStyled("Toutes les notifications sont marquées comme lues.", "-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";");
+        Region espS = new Region(); HBox.setHgrow(espS, Priority.ALWAYS);
+        HBox leg = new HBox(8); leg.setAlignment(Pos.CENTER_RIGHT);
+        leg.getChildren().addAll(
+                creerPillIcon("fas-check-circle",  "Succès", GREEN_BG, GREEN_TXT),
+                creerPillIcon("fas-exclamation-triangle", "Alerte", RED_BG, RED_TXT),
+                creerPillIcon("fas-bell", "Info", TEAL_BG, TEAL_DARK)
+        );
+        sousEn.getChildren().addAll(lRes, espS, leg);
 
-        VBox listeBox=new VBox(8); listeBox.setPadding(new Insets(14,16,14,16));
-        listeBox.setStyle("-fx-background-color:"+TEAL_BG_SOFT+";");
+        // ── Liste notifs ──────────────────────────────────────────
+        VBox listeBox = new VBox(8); listeBox.setPadding(new Insets(14, 16, 14, 16));
+        listeBox.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";");
 
-        if(notifs.isEmpty()){
-            VBox vide=new VBox(10); vide.setAlignment(Pos.CENTER); vide.setPadding(new Insets(48));
-            Label iv=new Label("🔕"); iv.setStyle("-fx-font-size:32px;");
-            Label mv=new Label("Aucune notification pour le moment."); mv.setStyle("-fx-font-size:13px;-fx-text-fill:"+TEXT_MUTED+";");
-            vide.getChildren().addAll(iv,mv); listeBox.getChildren().add(vide);
+        if (notifs.isEmpty()) {
+            VBox vide = new VBox(10); vide.setAlignment(Pos.CENTER); vide.setPadding(new Insets(48));
+            vide.getChildren().addAll(
+                    fi("fas-bell-slash", 32, TEXT_MUTED),
+                    labelStyled("Aucune notification pour le moment.", "-fx-font-size:13px;-fx-text-fill:" + TEXT_MUTED + ";")
+            );
+            listeBox.getChildren().add(vide);
         } else {
-            for(Notification n:notifs){
-                String bg,fg,bord,icone;
-                switch(n.getType()!=null?n.getType():""){
-                    case"INFO":  bg=GREEN_BG; fg=GREEN_TXT; bord=GREEN_BORDER; icone="✅"; break;
-                    case"ALERTE":bg=RED_BG;   fg=RED_TXT;   bord=RED_BORDER;   icone="⚠️"; break;
-                    default:     bg=TEAL_BG;  fg=TEAL_DARK; bord=BORDER_LIGHT; icone="🔔"; break;
+            for (Notification n : notifs) {
+                String bg, fg, bord, iconLiteral;
+                switch (n.getType() != null ? n.getType() : "") {
+                    case "INFO":   bg = GREEN_BG; fg = GREEN_TXT; bord = GREEN_BORDER; iconLiteral = "fas-check-circle";       break;
+                    case "ALERTE": bg = RED_BG;   fg = RED_TXT;   bord = RED_BORDER;   iconLiteral = "fas-exclamation-triangle"; break;
+                    default:       bg = TEAL_BG;  fg = TEAL_DARK; bord = BORDER_LIGHT; iconLiteral = "fas-bell";               break;
                 }
-                boolean nonLu=!n.isLu();
-                HBox rangee=new HBox(10); rangee.setAlignment(Pos.CENTER_LEFT);
-                rangee.setPadding(new Insets(11,14,11,14));
-                rangee.setStyle("-fx-background-color:"+bg+";-fx-background-radius:10;-fx-border-color:"+bord+";-fx-border-radius:10;-fx-border-width:"+(nonLu?"1.5":"0.8")+";");
-                if(nonLu){Region b=new Region();b.setPrefWidth(3);b.setPrefHeight(44);b.setMinHeight(Region.USE_PREF_SIZE);b.setStyle("-fx-background-color:"+fg+";-fx-background-radius:3;");rangee.getChildren().add(b);}
-                Label lIcN=new Label(icone); lIcN.setStyle("-fx-font-size:18px;-fx-min-width:22;");
-                VBox textes=new VBox(4); HBox.setHgrow(textes,Priority.ALWAYS);
-                if(nonLu){Label bn=new Label("NOUVEAU");bn.setStyle("-fx-background-color:"+fg+";-fx-text-fill:white;-fx-font-size:9px;-fx-font-weight:bold;-fx-padding:2 7;-fx-background-radius:20;");textes.getChildren().add(bn);}
-                Label lMsg=new Label(n.getMessage()); lMsg.setWrapText(true); lMsg.setMaxWidth(400);
-                lMsg.setStyle("-fx-font-size:12px;-fx-text-fill:"+fg+";"+(nonLu?"-fx-font-weight:bold;":""));
-                String date=n.getDateEnvoi()!=null?n.getDateEnvoi().toLocalDate().toString():"";
-                Label lDate=new Label("📅 "+date); lDate.setStyle("-fx-font-size:10px;-fx-text-fill:"+TEXT_MUTED+";");
-                textes.getChildren().addAll(lMsg,lDate);
-                rangee.getChildren().addAll(lIcN,textes); listeBox.getChildren().add(rangee);
+                boolean nonLu = !n.isLu();
+                HBox rangee = new HBox(10); rangee.setAlignment(Pos.CENTER_LEFT);
+                rangee.setPadding(new Insets(11, 14, 11, 14));
+                rangee.setStyle("-fx-background-color:" + bg + ";-fx-background-radius:10;-fx-border-color:" + bord + ";-fx-border-radius:10;-fx-border-width:" + (nonLu ? "1.5" : "0.8") + ";");
+                if (nonLu) {
+                    Region b = new Region(); b.setPrefWidth(3); b.setPrefHeight(44); b.setMinHeight(Region.USE_PREF_SIZE);
+                    b.setStyle("-fx-background-color:" + fg + ";-fx-background-radius:3;");
+                    rangee.getChildren().add(b);
+                }
+                // Icône FontIcon selon le type
+                FontIcon icoN = fi(iconLiteral, 18, fg);
+                VBox textes = new VBox(4); HBox.setHgrow(textes, Priority.ALWAYS);
+                if (nonLu) {
+                    Label bn = new Label("NOUVEAU");
+                    bn.setStyle("-fx-background-color:" + fg + ";-fx-text-fill:white;-fx-font-size:9px;-fx-font-weight:bold;-fx-padding:2 7;-fx-background-radius:20;");
+                    textes.getChildren().add(bn);
+                }
+                Label lMsg = new Label(n.getMessage()); lMsg.setWrapText(true); lMsg.setMaxWidth(400);
+                lMsg.setStyle("-fx-font-size:12px;-fx-text-fill:" + fg + ";" + (nonLu ? "-fx-font-weight:bold;" : ""));
+                String date = n.getDateEnvoi() != null ? n.getDateEnvoi().toLocalDate().toString() : "";
+                HBox dateRow = new HBox(4, fi("fas-calendar-alt", 10, TEXT_MUTED),
+                        labelStyled(date, "-fx-font-size:10px;-fx-text-fill:" + TEXT_MUTED + ";"));
+                dateRow.setAlignment(Pos.CENTER_LEFT);
+                textes.getChildren().addAll(lMsg, dateRow);
+                rangee.getChildren().addAll(icoN, textes);
+                listeBox.getChildren().add(rangee);
             }
         }
 
-        ScrollPane scroll=new ScrollPane(listeBox);
+        ScrollPane scroll = new ScrollPane(listeBox);
         scroll.setFitToWidth(true); scroll.setMaxHeight(400);
-        scroll.setPrefHeight(Math.min(notifs.size()*82+28,400));
+        scroll.setPrefHeight(Math.min(notifs.size() * 82 + 28, 400));
         scroll.setStyle("-fx-background-color:transparent;-fx-background:transparent;-fx-border-color:transparent;");
 
-        carte.getChildren().addAll(bande,ligne,sousEn,scroll,zoneBoutonFermer(fenetre));
+        carte.getChildren().addAll(bande, ligne, sousEn, scroll, zoneBoutonFermer(fenetre));
         overlay.getChildren().add(carte);
-        animerEtAfficher(carte,fenetre);
+        animerEtAfficher(carte, fenetre);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -580,7 +612,8 @@ public class AlertePersonnalisee {
         carte.setEffect(ombreCarte());
         carte.setStyle("-fx-background-color:" + type.fond + ";-fx-background-radius:14;");
 
-        HBox bande = bandeTitre(type.icone, titre != null && !titre.isEmpty() ? titre : type.defTitre, fenetre);
+        HBox bande = bandeTitre(type.iconLiteral,
+                titre != null && !titre.isEmpty() ? titre : type.defTitre, fenetre, couleurBtn(type));
         ((Button) bande.getChildren().get(bande.getChildren().size() - 1))
                 .setOnAction(e -> { resultat[0] = false; fenetre.close(); });
 
@@ -599,13 +632,15 @@ public class AlertePersonnalisee {
         boutons.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 14 14;");
         String cp = couleurBtn(type);
         if (avecAnnuler) {
-            Button bAnn = creerBouton("Annuler", TEAL_BG, TEAL_DARK, BORDER_LIGHT);
+            Button bAnn = creerBoutonIcon("fas-arrow-left", "Annuler", TEAL_BG, TEAL_DARK, BORDER_LIGHT);
             bAnn.setOnAction(e -> { resultat[0] = false; fenetre.close(); });
-            Button bOk = creerBouton(type == Type.ERREUR ? "🗑 Supprimer" : "✔ Confirmer", cp, "white", assombrir(cp));
+            String okLabel = type == Type.ERREUR ? "Supprimer" : "Confirmer";
+            String okIcon  = type == Type.ERREUR ? "fas-trash-alt" : "fas-check";
+            Button bOk = creerBoutonIcon(okIcon, okLabel, cp, ICON_WHITE, assombrir(cp));
             bOk.setOnAction(e -> { resultat[0] = true; fenetre.close(); });
             boutons.getChildren().addAll(bAnn, bOk);
         } else {
-            Button bOk = creerBouton("  OK  ", cp, "white", assombrir(cp));
+            Button bOk = creerBoutonIcon("fas-check", "OK", cp, ICON_WHITE, assombrir(cp));
             bOk.setMinWidth(100);
             bOk.setOnAction(e -> { resultat[0] = true; fenetre.close(); });
             boutons.getChildren().add(bOk);
@@ -621,28 +656,34 @@ public class AlertePersonnalisee {
     //  Helpers partagés
     // ════════════════════════════════════════════════════════════════
 
-    private static HBox bandeTitre(String icone, String titre, Stage fenetre) {
+    /** Bande de titre commune — icône FontIcon + texte + bouton X */
+    private static HBox bandeTitre(String iconLiteral, String titre, Stage fenetre, String iconColor) {
         HBox h = new HBox(10); h.setAlignment(Pos.CENTER_LEFT);
         h.setPadding(new Insets(14, 20, 14, 20));
         h.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:14 14 0 0;");
-        Label lLogo=new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep=new Label("|");   lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;");
-        Label lIco=new Label(icone); lIco.setStyle("-fx-font-size:16px;");
-        Label lTit=new Label(titre); lTit.setStyle("-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
-        Region esp=new Region(); HBox.setHgrow(esp,Priority.ALWAYS);
-        Label lApp=new Label("UNIV-SCHEDULER"); lApp.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.55);-fx-font-weight:bold;");
-        Button btnX=btnFermerX(); btnX.setOnAction(e->fenetre.close());
-        h.getChildren().addAll(lLogo,lSep,lIco,lTit,esp,lApp,btnX);
+
+        // fas-graduation-cap (comme navbar FXML étudiant, couleur ICON_NAV)
+        h.getChildren().add(fi("fas-graduation-cap", 16, ICON_NAV));
+        h.getChildren().add(labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.35);-fx-font-size:14px;"));
+        // Icône contexte (couleur passée en paramètre — pour la lisibilité sur fond dark)
+        h.getChildren().add(fi(iconLiteral, 15, ICON_NAV));
+
+        Label lTit = labelStyled(titre, "-fx-font-size:14px;-fx-font-weight:bold;-fx-text-fill:white;");
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Label lApp = labelStyled("UNIV-SCHEDULER", "-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.55);-fx-font-weight:bold;");
+        Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
+        h.getChildren().addAll(lTit, esp, lApp, btnX);
         return h;
     }
 
+    /** Bouton fermer X (fas-times, style rond translucide) */
     private static Button btnFermerX() {
-        Button b = new Button("✕");
-        String base = "-fx-background-color:rgba(255,255,255,0.15);-fx-text-fill:white;" +
-                "-fx-font-size:11px;-fx-background-radius:50;-fx-min-width:24;-fx-min-height:24;-fx-cursor:hand;-fx-padding:0;";
+        Button b = new Button();
+        b.setGraphic(fi("fas-times", 10, ICON_WHITE));
+        String base = "-fx-background-color:rgba(255,255,255,0.15);-fx-background-radius:50;-fx-min-width:24;-fx-min-height:24;-fx-cursor:hand;-fx-padding:0;";
         b.setStyle(base);
-        b.setOnMouseEntered(e -> b.setStyle(base.replace("0.15", "0.35")));
-        b.setOnMouseExited (e -> b.setStyle(base.replace("0.35", "0.15")));
+        b.setOnMouseEntered(e -> { b.setStyle(base.replace("0.15", "0.35")); });
+        b.setOnMouseExited (e -> { b.setStyle(base.replace("0.35", "0.15")); });
         return b;
     }
 
@@ -651,20 +692,22 @@ public class AlertePersonnalisee {
         r.setStyle("-fx-background-color:" + couleur + ";"); return r;
     }
 
+    /** Zone bouton fermer en bas de carte */
     private static HBox zoneBoutonFermer(Stage fenetre) {
         HBox z = new HBox(); z.setAlignment(Pos.CENTER_RIGHT);
         z.setPadding(new Insets(12, 24, 18, 24));
         z.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 14 14;");
-        Button btn = creerBouton("  Fermer  ", TEAL_DARK, "white", "#0f3d48");
+        Button btn = creerBoutonIcon("fas-times", "Fermer", TEAL_DARK, ICON_WHITE, "#0f3d48");
         btn.setOnAction(e -> fenetre.close()); z.getChildren().add(btn); return z;
     }
 
+    /** Grille d'informations (clé / valeur) */
     private static VBox grilleInfos(String[][] infos) {
         VBox g = new VBox(0);
         g.setStyle("-fx-background-color:white;-fx-background-radius:10;-fx-border-color:" + BORDER_LIGHT + ";-fx-border-radius:10;-fx-border-width:1;");
         for (int i = 0; i < infos.length; i++) {
             HBox r = new HBox(0); r.setPadding(new Insets(10, 14, 10, 14));
-            r.setStyle("-fx-background-color:" + (i%2==0?"white":ROW_ALT) + ";");
+            r.setStyle("-fx-background-color:" + (i % 2 == 0 ? "white" : ROW_ALT) + ";");
             Label c = new Label(infos[i][0]); c.setMinWidth(80);
             c.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-weight:bold;");
             Label v = new Label(infos[i][1]); v.setWrapText(true); v.setMaxWidth(280);
@@ -691,20 +734,27 @@ public class AlertePersonnalisee {
         fenetre.showAndWait();
     }
 
-    private static Button creerBouton(String texte, String bg, String fg, String hover) {
+    /** Bouton stylé avec FontIcon + texte */
+    private static Button creerBoutonIcon(String iconLiteral, String texte, String bg, String fg, String hover) {
         Button b = new Button(texte);
-        String base = "-fx-background-color:" + bg + ";-fx-text-fill:" + fg +
-                ";-fx-font-weight:bold;-fx-padding:9 22;-fx-background-radius:10;-fx-cursor:hand;-fx-font-size:13px;";
+        b.setGraphic(fi(iconLiteral, 12, fg));
+        String base = "-fx-background-color:" + bg + ";-fx-text-fill:" + fg + ";-fx-font-weight:bold;-fx-padding:9 22;-fx-background-radius:10;-fx-cursor:hand;-fx-font-size:13px;";
         b.setStyle(base);
-        b.setOnMouseEntered(e -> b.setStyle(base.replace(bg, hover)));
-        b.setOnMouseExited (e -> b.setStyle(base)); return b;
+        b.setOnMouseEntered(e -> { b.setStyle(base.replace(bg, hover)); b.setGraphic(fi(iconLiteral, 12, ICON_WHITE)); });
+        b.setOnMouseExited (e -> { b.setStyle(base); b.setGraphic(fi(iconLiteral, 12, fg)); });
+        return b;
     }
 
-    private static Label creerPill(String texte, String bg, String fg) {
-        Label l = new Label(texte);
-        l.setStyle("-fx-background-color:" + bg + ";-fx-text-fill:" + fg +
-                ";-fx-font-size:10px;-fx-font-weight:bold;-fx-padding:3 9;-fx-background-radius:20;");
-        return l;
+    /** Pill (badge) avec FontIcon */
+    private static HBox creerPillIcon(String iconLiteral, String texte, String bg, String fg) {
+        HBox h = new HBox(4, fi(iconLiteral, 10, fg), labelStyled(texte, "-fx-font-size:10px;-fx-font-weight:bold;-fx-text-fill:" + fg + ";"));
+        h.setAlignment(Pos.CENTER_LEFT);
+        h.setStyle("-fx-background-color:" + bg + ";-fx-padding:3 9;-fx-background-radius:20;");
+        return h;
+    }
+
+    private static Label labelStyled(String text, String style) {
+        Label l = new Label(text); l.setStyle(style); return l;
     }
 
     private static String assombrir(String hex) {
@@ -719,10 +769,7 @@ public class AlertePersonnalisee {
     //  ALERTES EXAMENS & DEVOIRS
     // ════════════════════════════════════════════════════════════════
 
-    /**
-     * ✅ Alerte SUCCÈS après soumission d'un examen/devoir.
-     * Affiche les détails complets de ce qui a été envoyé.
-     */
+    /** ✅ Alerte succès après soumission d'un examen/devoir */
     public static void examenSoumisAvecSucces(
             String type, String titre, String classeNom,
             String matiereNom, String dateExamen, String heure,
@@ -742,79 +789,65 @@ public class AlertePersonnalisee {
         carte.setEffect(ombreCarte());
         carte.setStyle("-fx-background-color:white;-fx-background-radius:18;");
 
-        // ── Bande teal-dark ───────────────────────────────────────
+        // Bande
         HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
         bande.setPadding(new Insets(15, 20, 15, 20));
         bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
-        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
-        String typeIcon = "EXAMEN".equals(type) ? "📋" : "DEVOIR".equals(type) ? "📝" : "✍️";
-        Label lIco  = new Label(typeIcon + " " + type); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:" + TEAL_LIGHT + ";");
-        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
-        Label lApp  = new Label("UNIV-SCHEDULER"); lApp.setStyle("-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.50);-fx-font-weight:bold;");
+        bande.getChildren().add(fi("fas-graduation-cap", 16, ICON_NAV));
+        bande.getChildren().add(labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.30);"));
+        String typeIconLiteral = "EXAMEN".equals(type) ? "fas-clipboard-list" : "DEVOIR".equals(type) ? "fas-pencil-alt" : "fas-pen";
+        bande.getChildren().add(fi(typeIconLiteral, 13, TEAL_LIGHT));
+        Label lTypeLabel = labelStyled(type, "-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:" + TEAL_LIGHT + ";");
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        Label lApp = labelStyled("UNIV-SCHEDULER", "-fx-font-size:10px;-fx-text-fill:rgba(255,255,255,0.50);-fx-font-weight:bold;");
         Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
-        bande.getChildren().addAll(lLogo, lSep, lIco, esp, lApp, btnX);
+        bande.getChildren().addAll(lTypeLabel, esp, lApp, btnX);
 
-        // ── Ligne verte ───────────────────────────────────────────
+        // Ligne verte
         Region ligne = new Region(); ligne.setPrefHeight(4);
         ligne.setStyle("-fx-background-color:" + GREEN_SOFT + ";");
 
-        // ── Zone succès ───────────────────────────────────────────
-        VBox zoneSucces = new VBox(6);
-        zoneSucces.setAlignment(Pos.CENTER);
+        // Zone succès
+        VBox zoneSucces = new VBox(8); zoneSucces.setAlignment(Pos.CENTER);
         zoneSucces.setPadding(new Insets(22, 24, 16, 24));
         zoneSucces.setStyle("-fx-background-color:#f0fdf4;");
 
-        // Cercle vert animé
-        StackPane cercle = new StackPane();
-        Circle bg = new Circle(34); bg.setFill(Color.web(GREEN_BG));
-        bg.setStroke(Color.web(GREEN_SOFT)); bg.setStrokeWidth(2.5);
-        Label check = new Label("✅"); check.setStyle("-fx-font-size:28px;");
-        cercle.getChildren().addAll(bg, check);
-
-        // Animation pop-in
+        // Cercle check (fas-check-circle dans cercle vert)
+        StackPane cercle = iconInCircle("fas-check-circle", 28, GREEN_SOFT, 34, GREEN_BG, GREEN_SOFT);
         cercle.setScaleX(0.3); cercle.setScaleY(0.3);
-        javafx.animation.ScaleTransition pop = new javafx.animation.ScaleTransition(
-                Duration.millis(320), cercle);
-        pop.setFromX(0.3); pop.setFromY(0.3);
-        pop.setToX(1.0);   pop.setToY(1.0);
+        javafx.animation.ScaleTransition pop = new javafx.animation.ScaleTransition(Duration.millis(320), cercle);
+        pop.setFromX(0.3); pop.setFromY(0.3); pop.setToX(1.0); pop.setToY(1.0);
         pop.setInterpolator(javafx.animation.Interpolator.SPLINE(0.175, 0.885, 0.320, 1.275));
         pop.play();
 
-        Label titreSucces = new Label("Demande soumise avec succès !");
-        titreSucces.setStyle("-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + GREEN_TXT + ";");
+        Label titreSucces = labelStyled("Demande soumise avec succès !", "-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + GREEN_TXT + ";");
         Label sousTitre = new Label("Le gestionnaire a été notifié et traitera votre demande.");
         sousTitre.setWrapText(true); sousTitre.setTextAlignment(TextAlignment.CENTER);
         sousTitre.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
         zoneSucces.getChildren().addAll(cercle, titreSucces, sousTitre);
 
-        // ── Séparateur ────────────────────────────────────────────
         Region sep = new Region(); sep.setPrefHeight(1);
         sep.setStyle("-fx-background-color:" + BORDER_LIGHT + ";");
 
-        // ── Récapitulatif ─────────────────────────────────────────
-        VBox recap = new VBox(0);
-        recap.setPadding(new Insets(14, 24, 10, 24));
-        Label titRecap = new Label("Récapitulatif de la demande");
-        titRecap.setPadding(new Insets(0, 0, 8, 0));
-        titRecap.setStyle("-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEXT_SECOND + ";letter-spacing:0.05em;");
+        // Récapitulatif
+        VBox recap = new VBox(0); recap.setPadding(new Insets(14, 24, 10, 24));
+        HBox titRecapRow = new HBox(6, fi("fas-list-alt", 12, TEXT_SECOND),
+                labelStyled("Récapitulatif de la demande", "-fx-font-size:12px;-fx-font-weight:bold;-fx-text-fill:" + TEXT_SECOND + ";"));
+        titRecapRow.setAlignment(Pos.CENTER_LEFT);
+        titRecapRow.setPadding(new Insets(0, 0, 8, 0));
 
         String salle = (salleNumero != null && !salleNumero.isBlank()) ? salleNumero : "Devoir à la maison";
-        String duree = dureeMinutes + " min";
-
         String[][] lignes = {
-                {"📋 Type",    typeIcon + " " + (type != null ? type : "—")},
-                {"📌 Titre",   titre    != null ? titre   : "—"},
-                {"🎓 Classe",  classeNom != null ? classeNom : "—"},
-                {"📚 Matière", matiereNom != null ? matiereNom : "—"},
-                {"📅 Date",    (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
-                {"⏱ Durée",   duree},
-                {"🏫 Salle",   salle},
+                {"Type",    type    != null ? type    : "—"},
+                {"Titre",   titre   != null ? titre   : "—"},
+                {"Classe",  classeNom  != null ? classeNom  : "—"},
+                {"Matière", matiereNom != null ? matiereNom : "—"},
+                {"Date",    (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
+                {"Durée",   dureeMinutes + " min"},
+                {"Salle",   salle},
         };
-
         VBox grille = new VBox(0);
-        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;"
-                + "-fx-border-color:" + BORDER_LIGHT + ";-fx-border-radius:10;-fx-border-width:1;");
+        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;-fx-border-color:" + BORDER_LIGHT + ";-fx-border-radius:10;-fx-border-width:1;");
         for (int i = 0; i < lignes.length; i++) {
             HBox rangee = new HBox(0); rangee.setPadding(new Insets(9, 14, 9, 14));
             rangee.setStyle("-fx-background-color:" + (i % 2 == 0 ? "white" : ROW_ALT) + ";"
@@ -824,25 +857,26 @@ public class AlertePersonnalisee {
             cle.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-weight:bold;");
             Label val = new Label(lignes[i][1]); val.setWrapText(true); val.setMaxWidth(290);
             val.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEAL_DARK + ";-fx-font-weight:bold;");
-            rangee.getChildren().addAll(cle, val);
-            grille.getChildren().add(rangee);
+            rangee.getChildren().addAll(cle, val); grille.getChildren().add(rangee);
         }
-        recap.getChildren().addAll(titRecap, grille);
+        recap.getChildren().addAll(titRecapRow, grille);
 
-        // ── Info badge ────────────────────────────────────────────
+        // Info badge
         HBox infoBadge = new HBox(8); infoBadge.setAlignment(Pos.CENTER_LEFT);
         infoBadge.setPadding(new Insets(10, 24, 4, 24));
-        Label infoIco = new Label("🔔"); infoIco.setStyle("-fx-font-size:14px;");
-        Label infoTxt = new Label("Vous recevrez une notification dès que le gestionnaire aura traité votre demande.");
-        infoTxt.setWrapText(true); infoTxt.setMaxWidth(380);
-        infoTxt.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;");
-        infoBadge.getChildren().addAll(infoIco, infoTxt);
+        infoBadge.getChildren().addAll(
+                fi("fas-bell", 14, TEAL_MID),
+                new Label("Vous recevrez une notification dès validation par le gestionnaire.") {{
+                    setWrapText(true); setMaxWidth(380);
+                    setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;");
+                }}
+        );
 
-        // ── Bouton fermer ─────────────────────────────────────────
+        // Bouton fermer
         HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
         zoneFermer.setPadding(new Insets(12, 24, 18, 24));
         zoneFermer.setStyle("-fx-background-color:#f0fdf4;-fx-background-radius:0 0 18 18;");
-        Button btnFermer = creerBouton("  Parfait ! ✓  ", GREEN_SOFT, "white", "#2aaf72");
+        Button btnFermer = creerBoutonIcon("fas-check", "Parfait !", GREEN_SOFT, ICON_WHITE, "#2aaf72");
         btnFermer.setOnAction(e -> fenetre.close());
         zoneFermer.getChildren().add(btnFermer);
 
@@ -851,9 +885,7 @@ public class AlertePersonnalisee {
         animerEtAfficher(carte, fenetre);
     }
 
-    /**
-     * ❌ Alerte VALIDATION MANQUANTE — liste les champs vides.
-     */
+    /** ⚠️ Alerte champs manquants */
     public static void examenChampsManquants(List<String> champsManquants) {
         Stage fenetre = new Stage();
         fenetre.initModality(Modality.APPLICATION_MODAL);
@@ -872,50 +904,41 @@ public class AlertePersonnalisee {
         HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
         bande.setPadding(new Insets(15, 20, 15, 20));
         bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
-        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
-        Label lIco  = new Label("⚠️ Champs manquants"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
-        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        bande.getChildren().addAll(
+                fi("fas-graduation-cap", 16, ICON_NAV),
+                labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.30);"),
+                fi("fas-exclamation-triangle", 14, GOLD),
+                labelStyled("Champs manquants", "-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;")
+        );
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
         Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
-        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+        bande.getChildren().addAll(esp, btnX);
 
         Region ligne = new Region(); ligne.setPrefHeight(4);
         ligne.setStyle("-fx-background-color:" + GOLD + ";");
 
-        // Zone icône + message
         VBox zoneWarn = new VBox(8); zoneWarn.setAlignment(Pos.CENTER);
         zoneWarn.setPadding(new Insets(20, 24, 14, 24));
         zoneWarn.setStyle("-fx-background-color:" + GOLD_BG + ";");
 
-        StackPane cercle = new StackPane();
-        Circle bg = new Circle(30); bg.setFill(Color.web(GOLD_BG));
-        bg.setStroke(Color.web(GOLD)); bg.setStrokeWidth(2.5);
-        Label icoWarn = new Label("⚠️"); icoWarn.setStyle("-fx-font-size:24px;");
-        cercle.getChildren().addAll(bg, icoWarn);
-
-        Label titWarn = new Label("Formulaire incomplet");
-        titWarn.setStyle("-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";");
-        Label sousWarn = new Label("Veuillez remplir les champs obligatoires (*) :");
-        sousWarn.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
+        StackPane cercle = iconInCircle("fas-exclamation-triangle", 22, GOLD, 30, GOLD_BG, GOLD);
+        Label titWarn = labelStyled("Formulaire incomplet", "-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";");
+        Label sousWarn = labelStyled("Veuillez remplir les champs obligatoires (*) :", "-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
         zoneWarn.getChildren().addAll(cercle, titWarn, sousWarn);
 
-        // Liste des champs manquants
         VBox listeCh = new VBox(6); listeCh.setPadding(new Insets(14, 24, 14, 24));
         for (String champ : champsManquants) {
             HBox row = new HBox(10); row.setAlignment(Pos.CENTER_LEFT);
             row.setPadding(new Insets(8, 12, 8, 12));
-            row.setStyle("-fx-background-color:" + RED_BG + ";-fx-background-radius:8;"
-                    + "-fx-border-color:" + RED_BORDER + ";-fx-border-radius:8;-fx-border-width:1;");
-            Label dot = new Label("●"); dot.setStyle("-fx-text-fill:" + RED_SOFT + ";-fx-font-size:10px;");
-            Label lbl = new Label(champ); lbl.setStyle("-fx-font-size:13px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;");
-            row.getChildren().addAll(dot, lbl);
+            row.setStyle("-fx-background-color:" + RED_BG + ";-fx-background-radius:8;-fx-border-color:" + RED_BORDER + ";-fx-border-radius:8;-fx-border-width:1;");
+            row.getChildren().addAll(fi("fas-circle", 8, RED_SOFT), labelStyled(champ, "-fx-font-size:13px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;"));
             listeCh.getChildren().add(row);
         }
 
         HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
         zoneFermer.setPadding(new Insets(12, 24, 18, 24));
         zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
-        Button btnOk = creerBouton("  Corriger les champs  ", TEAL_MID, "white", TEAL_DARK);
+        Button btnOk = creerBoutonIcon("fas-edit", "Corriger les champs", TEAL_MID, ICON_WHITE, TEAL_DARK);
         btnOk.setOnAction(e -> fenetre.close());
         zoneFermer.getChildren().add(btnOk);
 
@@ -924,9 +947,7 @@ public class AlertePersonnalisee {
         animerEtAfficher(carte, fenetre);
     }
 
-    /**
-     * 🔴 Alerte CONFLIT SALLE détecté.
-     */
+    /** 🔴 Alerte conflit de salle */
     public static void examenConflitSalle(String salleNumero, String dateExamen, String heure) {
         Stage fenetre = new Stage();
         fenetre.initModality(Modality.APPLICATION_MODAL);
@@ -945,12 +966,15 @@ public class AlertePersonnalisee {
         HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
         bande.setPadding(new Insets(15, 20, 15, 20));
         bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
-        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
-        Label lIco  = new Label("🔴 Conflit de Salle"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
-        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        bande.getChildren().addAll(
+                fi("fas-graduation-cap", 16, ICON_NAV),
+                labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.30);"),
+                fi("fas-times-circle", 14, RED_SOFT),
+                labelStyled("Conflit de Salle", "-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;")
+        );
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
         Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
-        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+        bande.getChildren().addAll(esp, btnX);
 
         Region ligne = new Region(); ligne.setPrefHeight(4);
         ligne.setStyle("-fx-background-color:" + RED_SOFT + ";");
@@ -959,56 +983,41 @@ public class AlertePersonnalisee {
         zoneErr.setPadding(new Insets(22, 24, 16, 24));
         zoneErr.setStyle("-fx-background-color:" + RED_BG + ";");
 
-        StackPane cercle = new StackPane();
-        Circle bg = new Circle(32); bg.setFill(Color.web(RED_BG));
-        bg.setStroke(Color.web(RED_SOFT)); bg.setStrokeWidth(2.5);
-
-        // Shake animation
+        StackPane cercle = iconInCircle("fas-times-circle", 26, RED_SOFT, 32, RED_BG, RED_SOFT);
         TranslateTransition shake = new TranslateTransition(Duration.millis(60), cercle);
-        shake.setFromX(-6); shake.setToX(6); shake.setCycleCount(6);
-        shake.setAutoReverse(true); shake.play();
+        shake.setFromX(-6); shake.setToX(6); shake.setCycleCount(6); shake.setAutoReverse(true); shake.play();
 
-        Label icoErr = new Label("❌"); icoErr.setStyle("-fx-font-size:26px;");
-        cercle.getChildren().addAll(bg, icoErr);
-
-        Label titErr = new Label("Salle déjà occupée !");
-        titErr.setStyle("-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + RED_TXT + ";");
-        Label sousErr = new Label("La salle est indisponible pour ce créneau.");
-        sousErr.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
+        Label titErr = labelStyled("Salle déjà occupée !", "-fx-font-size:17px;-fx-font-weight:bold;-fx-text-fill:" + RED_TXT + ";");
+        Label sousErr = labelStyled("La salle est indisponible pour ce créneau.", "-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";");
         zoneErr.getChildren().addAll(cercle, titErr, sousErr);
 
-        // Infos conflit
         VBox details = new VBox(0); details.setPadding(new Insets(14, 24, 14, 24));
         String[][] infos = {
-                {"🏫 Salle", salleNumero != null ? salleNumero : "—"},
-                {"📅 Date",  (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
+                {"Salle", salleNumero != null ? salleNumero : "—"},
+                {"Date",  (dateExamen != null ? dateExamen : "—") + " à " + (heure != null ? heure : "—")},
         };
         VBox grille = new VBox(0);
-        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;"
-                + "-fx-border-color:" + RED_BORDER + ";-fx-border-radius:10;-fx-border-width:1;");
+        grille.setStyle("-fx-background-color:white;-fx-background-radius:10;-fx-border-color:" + RED_BORDER + ";-fx-border-radius:10;-fx-border-width:1;");
         for (int i = 0; i < infos.length; i++) {
             HBox row = new HBox(0); row.setPadding(new Insets(10, 14, 10, 14));
             row.setStyle("-fx-background-color:" + (i % 2 == 0 ? "white" : "#fff5f5") + ";"
                     + (i == 0 ? "-fx-background-radius:10 10 0 0;" : "-fx-background-radius:0 0 10 10;"));
             Label c = new Label(infos[i][0]); c.setMinWidth(80);
             c.setStyle("-fx-font-size:11px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-weight:bold;");
-            Label v = new Label(infos[i][1]); v.setStyle("-fx-font-size:12px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;");
+            Label v = new Label(infos[i][1]);
+            v.setStyle("-fx-font-size:12px;-fx-text-fill:" + RED_TXT + ";-fx-font-weight:bold;");
             row.getChildren().addAll(c, v); grille.getChildren().add(row);
         }
-
         HBox conseil = new HBox(8); conseil.setAlignment(Pos.CENTER_LEFT);
         conseil.setPadding(new Insets(10, 0, 0, 0));
-        Label conseilIco = new Label("💡"); conseilIco.setStyle("-fx-font-size:14px;");
-        Label conseilTxt = new Label("Choisissez une autre salle ou une autre date/heure.");
-        conseilTxt.setStyle("-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;");
-        conseil.getChildren().addAll(conseilIco, conseilTxt);
-
+        conseil.getChildren().addAll(fi("fas-lightbulb", 14, GOLD),
+                labelStyled("Choisissez une autre salle ou une autre date/heure.", "-fx-font-size:12px;-fx-text-fill:" + TEXT_SECOND + ";-fx-font-style:italic;"));
         details.getChildren().addAll(grille, conseil);
 
         HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
         zoneFermer.setPadding(new Insets(12, 24, 18, 24));
         zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
-        Button btnOk = creerBouton("  Modifier le formulaire  ", RED_SOFT, "white", "#c44040");
+        Button btnOk = creerBoutonIcon("fas-edit", "Modifier le formulaire", RED_SOFT, ICON_WHITE, "#c44040");
         btnOk.setOnAction(e -> fenetre.close());
         zoneFermer.getChildren().add(btnOk);
 
@@ -1017,9 +1026,7 @@ public class AlertePersonnalisee {
         animerEtAfficher(carte, fenetre);
     }
 
-    /**
-     * 📅 Alerte DATE PASSÉE.
-     */
+    /** 📅 Alerte date passée */
     public static void examenDatePassee(String dateChoisie) {
         Stage fenetre = new Stage();
         fenetre.initModality(Modality.APPLICATION_MODAL);
@@ -1038,12 +1045,15 @@ public class AlertePersonnalisee {
         HBox bande = new HBox(10); bande.setAlignment(Pos.CENTER_LEFT);
         bande.setPadding(new Insets(15, 20, 15, 20));
         bande.setStyle("-fx-background-color:" + TEAL_DARK + ";-fx-background-radius:18 18 0 0;");
-        Label lLogo = new Label("🎓"); lLogo.setStyle("-fx-font-size:16px;");
-        Label lSep  = new Label("|"); lSep.setStyle("-fx-text-fill:rgba(255,255,255,0.30);");
-        Label lIco  = new Label("📅 Date invalide"); lIco.setStyle("-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;");
-        Region esp  = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
+        bande.getChildren().addAll(
+                fi("fas-graduation-cap", 16, ICON_NAV),
+                labelStyled("|", "-fx-text-fill:rgba(255,255,255,0.30);"),
+                fi("fas-calendar-times", 14, GOLD),
+                labelStyled("Date invalide", "-fx-font-size:13px;-fx-font-weight:bold;-fx-text-fill:white;")
+        );
+        Region esp = new Region(); HBox.setHgrow(esp, Priority.ALWAYS);
         Button btnX = btnFermerX(); btnX.setOnAction(e -> fenetre.close());
-        bande.getChildren().addAll(lLogo, lSep, lIco, esp, btnX);
+        bande.getChildren().addAll(esp, btnX);
 
         Region ligne = new Region(); ligne.setPrefHeight(4);
         ligne.setStyle("-fx-background-color:" + GOLD + ";");
@@ -1052,19 +1062,20 @@ public class AlertePersonnalisee {
         corps.setPadding(new Insets(28, 28, 20, 28));
         corps.setStyle("-fx-background-color:" + GOLD_BG + ";");
 
-        Label ico = new Label("📅"); ico.setStyle("-fx-font-size:40px;");
-        Label tit = new Label("Date dans le passé");
-        tit.setStyle("-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";");
-        Label msg = new Label("La date sélectionnée (" + (dateChoisie != null ? dateChoisie : "—")
-                + ") est déjà passée.\nVeuillez choisir une date future.");
-        msg.setWrapText(true); msg.setTextAlignment(TextAlignment.CENTER);
-        msg.setStyle("-fx-font-size:13px;-fx-text-fill:" + TEXT_SECOND + ";");
-        corps.getChildren().addAll(ico, tit, msg);
+        corps.getChildren().addAll(
+                fi("fas-calendar-times", 40, GOLD),
+                labelStyled("Date dans le passé", "-fx-font-size:16px;-fx-font-weight:bold;-fx-text-fill:" + GOLD_TXT + ";"),
+                new Label("La date sélectionnée (" + (dateChoisie != null ? dateChoisie : "—")
+                        + ") est déjà passée.\nVeuillez choisir une date future.") {{
+                    setWrapText(true); setTextAlignment(TextAlignment.CENTER);
+                    setStyle("-fx-font-size:13px;-fx-text-fill:" + TEXT_SECOND + ";");
+                }}
+        );
 
         HBox zoneFermer = new HBox(); zoneFermer.setAlignment(Pos.CENTER_RIGHT);
         zoneFermer.setPadding(new Insets(12, 24, 18, 24));
         zoneFermer.setStyle("-fx-background-color:" + TEAL_BG_SOFT + ";-fx-background-radius:0 0 18 18;");
-        Button btnOk = creerBouton("  Choisir une autre date  ", GOLD, "white", "#c87f00");
+        Button btnOk = creerBoutonIcon("fas-calendar-alt", "Choisir une autre date", GOLD, ICON_WHITE, "#c87f00");
         btnOk.setOnAction(e -> fenetre.close());
         zoneFermer.getChildren().add(btnOk);
 
