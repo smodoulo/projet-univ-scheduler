@@ -621,5 +621,5 @@ public class AdminDashboardController extends BaseController {
 
     @FXML private void handleRefresh() { loadAll(); buildCharts(); }
     @FXML private void handleLogout()  { logout(); }
-    @FXML protected void openChatbot() { AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet()); }
+
 }

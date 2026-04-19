@@ -708,9 +708,6 @@ public class GestionnaireDashboardController extends BaseController {
         notifDAO.markAllRead(currentUser.getId());refreshNotifBadge();
         AlertePersonnalisee.afficherNotifications(notifs);
     }
-    @FXML protected void openChatbot() {
-        AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet());
-    }
 
     // ════════════════════════════════════════════════════════════════
     //  Charts classiques

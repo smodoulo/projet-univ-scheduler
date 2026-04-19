@@ -605,7 +605,6 @@ public class EtudiantDashboardController extends BaseController {
         try { exportSvc.exportCoursAsPDF(coursList,f); showInfo("Export PDF","Exporte : "+f.getName()); } catch (Exception e) { showError("Erreur",e.getMessage()); }
     }
 
-    @FXML protected void openChatbot() { AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet()); }
     @FXML private void handleLogout()  { arreterAutoRefresh(); logout(); }
     @FXML private void handleRefresh() { loadCours(); loadNotifications(); }
 }

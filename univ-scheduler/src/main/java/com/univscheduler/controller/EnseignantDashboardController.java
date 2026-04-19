@@ -1190,7 +1190,6 @@ public class EnseignantDashboardController extends BaseController {
         catch (Exception e) { showError("Erreur", e.getMessage()); }
     }
 
-    @FXML protected void openChatbot() { AlertePersonnalisee.ouvrirChatbot(currentUser.getNomComplet()); }
     @FXML private void handleLogout()  { arreterRappelStatutCours(); Servicerappel.getInstance().arreter(); logout(); }
     @FXML private void handleRefresh() { loadData(); buildChart(); }
 }
