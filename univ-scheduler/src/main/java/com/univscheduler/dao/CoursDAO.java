@@ -1,218 +1,264 @@
 package com.univscheduler.dao;
 
 import com.univscheduler.model.Cours;
+
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.*;
 
 public class CoursDAO {
-    private DatabaseManager db = DatabaseManager.getInstance();
 
-    private static final String SELECT_SQL =
-            "SELECT c.*, m.nom as mat_nom, " +
-                    "CONCAT(u.prenom,' ',u.nom) as ens_nom, " +
-                    "cp.nom as cls_nom, " +
-                    "CONCAT(cr.jour,' ',cr.heure_debut,'h') as cren_info, " +
-                    "s.numero as salle_num " +
-                    "FROM cours c " +
-                    "LEFT JOIN matieres m ON c.matiere_id = m.id " +
-                    "LEFT JOIN utilisateurs u ON c.enseignant_id = u.id " +
-                    "LEFT JOIN classes_pedago cp ON c.classe_id = cp.id " +
-                    "LEFT JOIN creneaux cr ON c.creneau_id = cr.id " +
-                    "LEFT JOIN salles s ON c.salle_id = s.id ";
-
-    public List<Cours> findAll() {
-        List<Cours> list = new ArrayList<>();
-        try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(SELECT_SQL + "ORDER BY c.date, cr.heure_debut");
-            while (rs.next()) list.add(map(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+    private Connection getConn() throws SQLException {
+        return DatabaseManager.getInstance().getConnection();
     }
 
-    public List<Cours> findByEnseignant(int ensId) {
-        List<Cours> list = new ArrayList<>();
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                SELECT_SQL + "WHERE c.enseignant_id=? ORDER BY c.date, cr.heure_debut")) {
-            ps.setInt(1, ensId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(map(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+    // ════════════════════════════════════════════════════════════════
+    //  REQUÊTES PRINCIPALES
+    // ════════════════════════════════════════════════════════════════
+
+    public List<Cours> findAll() {
+        return query("", null, null);
+    }
+
+    public List<Cours> findByEnseignant(int enseignantId) {
+        return query("WHERE c.enseignant_id = ?", enseignantId, null);
     }
 
     public List<Cours> findByClasse(int classeId) {
-        List<Cours> list = new ArrayList<>();
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                SELECT_SQL + "WHERE c.classe_id=? ORDER BY c.date, cr.heure_debut")) {
-            ps.setInt(1, classeId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(map(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+        return query("WHERE c.classe_id = ?", classeId, null);
     }
 
     public List<Cours> findBySalle(int salleId) {
-        List<Cours> list = new ArrayList<>();
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                SELECT_SQL + "WHERE c.salle_id=? ORDER BY c.date, cr.heure_debut")) {
-            ps.setInt(1, salleId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(map(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+        return query("WHERE c.salle_id = ?", salleId, null);
     }
 
-    public Map<Integer, Integer> countBySalle() {
-        Map<Integer, Integer> m = new LinkedHashMap<>();
-        try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT salle_id, COUNT(*) as cnt FROM cours GROUP BY salle_id");
-            while (rs.next()) m.put(rs.getInt("salle_id"), rs.getInt("cnt"));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return m;
+    public Cours findById(int id) {
+        List<Cours> list = query("WHERE c.id = ?", id, null);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  COMPTAGES
+    // ════════════════════════════════════════════════════════════════
+
+    public int count() {
+        String sql = "SELECT COUNT(*) FROM cours";
+        try (Connection conn = getConn();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] count : " + e.getMessage());
+        }
+        return 0;
     }
 
     public Map<String, Integer> countByJour() {
-        Map<String, Integer> m = new LinkedHashMap<>();
+        Map<String, Integer> result = new LinkedHashMap<>();
         String[] jours = {"Lundi","Mardi","Mercredi","Jeudi","Vendredi"};
-        for (String j : jours) m.put(j, 0);
-        try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT cr.jour, COUNT(*) as cnt FROM cours c " +
-                            "LEFT JOIN creneaux cr ON c.creneau_id = cr.id GROUP BY cr.jour");
-            while (rs.next()) {
-                String j = rs.getString("jour");
-                if (j != null) m.put(j, rs.getInt("cnt"));
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return m;
+        for (String j : jours) result.put(j, 0);
+        String sql = "SELECT cr.jour, COUNT(*) AS nb"
+                + " FROM cours c JOIN creneaux cr ON c.creneau_id = cr.id GROUP BY cr.jour";
+        try (Connection conn = getConn();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) result.put(rs.getString("jour"), rs.getInt("nb"));
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] countByJour : " + e.getMessage());
+        }
+        return result;
     }
 
-    /**
-     * Comptage global de tous les cours par statut (utilisé par l'admin/gestionnaire).
-     */
     public Map<String, Integer> countByStatut() {
-        Map<String, Integer> m = new LinkedHashMap<>();
-        try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT statut, COUNT(*) as cnt FROM cours GROUP BY statut");
-            while (rs.next()) m.put(rs.getString("statut"), rs.getInt("cnt"));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return m;
+        Map<String, Integer> result = new LinkedHashMap<>();
+        String sql = "SELECT statut, COUNT(*) AS nb FROM cours GROUP BY statut";
+        try (Connection conn = getConn();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+            while (rs.next()) result.put(rs.getString("statut"), rs.getInt("nb"));
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] countByStatut : " + e.getMessage());
+        }
+        return result;
     }
 
-    /**
-     * ✅ NOUVEAU : Comptage des cours d'un enseignant spécifique par statut.
-     * Utilisé par le graphe camembert du tableau de bord enseignant.
-     */
     public Map<String, Integer> countByStatutForEnseignant(int enseignantId) {
-        Map<String, Integer> m = new LinkedHashMap<>();
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                "SELECT statut, COUNT(*) as cnt FROM cours WHERE enseignant_id=? GROUP BY statut")) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        String sql = "SELECT statut, COUNT(*) as nb FROM cours WHERE enseignant_id = ? GROUP BY statut";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, enseignantId);
             ResultSet rs = ps.executeQuery();
-            while (rs.next()) m.put(rs.getString("statut"), rs.getInt("cnt"));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return m;
-    }
-
-    public boolean hasConflitSalle(int salleId, int creneauId, String date, int excludeId) {
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                "SELECT COUNT(*) FROM cours WHERE salle_id=? AND creneau_id=? AND date=? AND id!=?")) {
-            ps.setInt(1, salleId); ps.setInt(2, creneauId);
-            ps.setString(3, date); ps.setInt(4, excludeId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1) > 0;
-        } catch (SQLException e) { e.printStackTrace(); }
-        return false;
-    }
-
-    public boolean hasConflitEnseignant(int ensId, int creneauId, String date, int excludeId) {
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                "SELECT COUNT(*) FROM cours WHERE enseignant_id=? AND creneau_id=? AND date=? AND id!=?")) {
-            ps.setInt(1, ensId); ps.setInt(2, creneauId);
-            ps.setString(3, date); ps.setInt(4, excludeId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getInt(1) > 0;
-        } catch (SQLException e) { e.printStackTrace(); }
-        return false;
-    }
-
-    // Statut PLANIFIE par défaut à la création
-    public void save(Cours c) {
-        if (c.getStatut() == null || c.getStatut().isEmpty()) {
-            c.setStatut("PLANIFIE");
+            while (rs.next()) result.put(rs.getString("statut"), rs.getInt("nb"));
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] countByStatutForEnseignant: " + e.getMessage());
         }
+        return result;
+    }
+
+    public Map<Integer, Integer> countBySalle() {
+        Map<Integer, Integer> result = new HashMap<>();
+        String sql = "SELECT salle_id, COUNT(*) as nb FROM cours WHERE salle_id IS NOT NULL GROUP BY salle_id";
+        try (Connection conn = getConn();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) result.put(rs.getInt("salle_id"), rs.getInt("nb"));
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] countBySalle: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  VÉRIFICATIONS DE CONFLIT
+    // ════════════════════════════════════════════════════════════════
+
+    public boolean hasConflitSalle(int salleId, int creneauId, String date, int exclureId) {
+        String sql = "SELECT COUNT(*) FROM cours WHERE salle_id=? AND creneau_id=? AND date=? AND id<>?";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, salleId); ps.setInt(2, creneauId);
+            ps.setString(3, date); ps.setInt(4, exclureId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] hasConflitSalle : " + e.getMessage());
+        }
+        return false;
+    }
+
+    public boolean hasConflitEnseignant(int enseignantId, int creneauId, String date, int exclureId) {
+        String sql = "SELECT COUNT(*) FROM cours WHERE enseignant_id=? AND creneau_id=? AND date=? AND id<>?";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, enseignantId); ps.setInt(2, creneauId);
+            ps.setString(3, date); ps.setInt(4, exclureId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] hasConflitEnseignant : " + e.getMessage());
+        }
+        return false;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    //  OPÉRATIONS D'ÉCRITURE
+    // ════════════════════════════════════════════════════════════════
+
+    public void save(Cours c) {
         if (c.getId() == 0) {
-            try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                    "INSERT INTO cours(statut,date,matiere_id,enseignant_id,classe_id,creneau_id,salle_id) " +
-                            "VALUES(?,?,?,?,?,?,?)", Statement.RETURN_GENERATED_KEYS)) {
-                ps.setString(1, c.getStatut());
-                ps.setString(2, c.getDate().toString());
+            String sql = "INSERT INTO cours(statut, date, matiere_id, enseignant_id, classe_id, creneau_id, salle_id)"
+                    + " VALUES(?,?,?,?,?,?,?)";
+            try (Connection conn = getConn();
+                 PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, c.getStatut() != null ? c.getStatut() : "PLANIFIE");
+                ps.setString(2, c.getDate() != null ? c.getDate().toString() : null);
                 ps.setInt(3, c.getMatiereId()); ps.setInt(4, c.getEnseignantId());
                 ps.setInt(5, c.getClasseId());  ps.setInt(6, c.getCreneauId());
                 ps.setInt(7, c.getSalleId());
                 ps.executeUpdate();
-                ResultSet k = ps.getGeneratedKeys();
-                if (k.next()) c.setId(k.getInt(1));
-            } catch (SQLException e) { e.printStackTrace(); }
+                ResultSet gk = ps.getGeneratedKeys();
+                if (gk.next()) c.setId(gk.getInt(1));
+            } catch (SQLException e) {
+                System.err.println("[CoursDAO] save INSERT : " + e.getMessage());
+            }
         } else {
-            try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE cours SET statut=?,date=?,matiere_id=?,enseignant_id=?," +
-                            "classe_id=?,creneau_id=?,salle_id=? WHERE id=?")) {
+            String sql = "UPDATE cours SET statut=?, date=?, matiere_id=?, enseignant_id=?,"
+                    + " classe_id=?, creneau_id=?, salle_id=? WHERE id=?";
+            try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, c.getStatut());
-                ps.setString(2, c.getDate().toString());
+                ps.setString(2, c.getDate() != null ? c.getDate().toString() : null);
                 ps.setInt(3, c.getMatiereId()); ps.setInt(4, c.getEnseignantId());
                 ps.setInt(5, c.getClasseId());  ps.setInt(6, c.getCreneauId());
                 ps.setInt(7, c.getSalleId());   ps.setInt(8, c.getId());
                 ps.executeUpdate();
-            } catch (SQLException e) { e.printStackTrace(); }
+            } catch (SQLException e) {
+                System.err.println("[CoursDAO] save UPDATE : " + e.getMessage());
+            }
         }
     }
 
-    // Mise à jour uniquement du statut
-    public void updateStatut(int coursId, String nouveauStatut) {
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                "UPDATE cours SET statut=? WHERE id=?")) {
-            ps.setString(1, nouveauStatut);
-            ps.setInt(2, coursId);
+    public void updateStatut(int id, String statut) {
+        String sql = "UPDATE cours SET statut = ? WHERE id = ?";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, statut); ps.setInt(2, id);
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] updateStatut : " + e.getMessage());
+        }
+    }
+
+    /**
+     * ✅ Méthode requise par DisponibiliteService.accepter()
+     * Met à jour le créneau d'un cours quand une demande de disponibilité est acceptée.
+     */
+    public void updateCreneau(int coursId, int creneauId) {
+        String sql = "UPDATE cours SET creneau_id = ? WHERE id = ?";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, creneauId); ps.setInt(2, coursId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] updateCreneau : " + e.getMessage());
+        }
     }
 
     public void delete(int id) {
-        try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(
-                "DELETE FROM cours WHERE id=?")) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        String sql = "DELETE FROM cours WHERE id = ?";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id); ps.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] delete : " + e.getMessage());
+        }
     }
 
-    public int count() {
-        try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM cours");
-            if (rs.next()) return rs.getInt(1);
-        } catch (SQLException e) { e.printStackTrace(); }
-        return 0;
+    // ════════════════════════════════════════════════════════════════
+    //  MÉTHODES INTERNES
+    // ════════════════════════════════════════════════════════════════
+
+    private List<Cours> query(String whereClause, Integer param1, Integer param2) {
+        List<Cours> result = new ArrayList<>();
+        String sql = "SELECT c.id, c.statut, c.date,"
+                + " m.id AS mat_id,  m.nom  AS mat_nom,"
+                + " u.id AS ens_id,  CONCAT(u.prenom,' ',u.nom) AS ens_nom,"
+                + " cp.id AS cls_id, cp.nom AS cls_nom,"
+                + " cr.id AS cren_id,"
+                + " CONCAT(cr.jour,' ',cr.heure_debut,'h (',cr.duree,'h)') AS cren_info,"
+                + " s.id  AS sal_id, s.numero AS sal_num"
+                + " FROM cours c"
+                + " LEFT JOIN matieres       m  ON c.matiere_id    = m.id"
+                + " LEFT JOIN utilisateurs   u  ON c.enseignant_id = u.id"
+                + " LEFT JOIN classes_pedago cp ON c.classe_id     = cp.id"
+                + " LEFT JOIN creneaux       cr ON c.creneau_id    = cr.id"
+                + " LEFT JOIN salles         s  ON c.salle_id      = s.id"
+                + " " + whereClause
+                + " ORDER BY c.date DESC, cr.heure_debut ASC";
+        try (Connection conn = getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (param1 != null) ps.setInt(1, param1);
+            if (param2 != null) ps.setInt(2, param2);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) result.add(mapRow(rs));
+        } catch (SQLException e) {
+            System.err.println("[CoursDAO] query : " + e.getMessage());
+        }
+        return result;
     }
 
-    private Cours map(ResultSet rs) throws SQLException {
+    private Cours mapRow(ResultSet rs) throws SQLException {
         Cours c = new Cours();
         c.setId(rs.getInt("id"));
         c.setStatut(rs.getString("statut"));
         String d = rs.getString("date");
-        if (d != null) c.setDate(LocalDate.parse(d));
-        c.setMatiereId(rs.getInt("matiere_id"));
+        if (d != null && !d.isBlank()) {
+            try { c.setDate(LocalDate.parse(d.substring(0, 10))); }
+            catch (Exception ignored) {}
+        }
+        c.setMatiereId(rs.getInt("mat_id"));
         c.setMatiereNom(rs.getString("mat_nom"));
-        c.setEnseignantId(rs.getInt("enseignant_id"));
+        c.setEnseignantId(rs.getInt("ens_id"));
         c.setEnseignantNom(rs.getString("ens_nom"));
-        c.setClasseId(rs.getInt("classe_id"));
+        c.setClasseId(rs.getInt("cls_id"));
         c.setClasseNom(rs.getString("cls_nom"));
-        c.setCreneauId(rs.getInt("creneau_id"));
+        c.setCreneauId(rs.getInt("cren_id"));
         c.setCreneauInfo(rs.getString("cren_info"));
-        c.setSalleId(rs.getInt("salle_id"));
-        c.setSalleNumero(rs.getString("salle_num"));
+        c.setSalleId(rs.getInt("sal_id"));
+        c.setSalleNumero(rs.getString("sal_num"));
         return c;
     }
 }
